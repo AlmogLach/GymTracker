@@ -115,6 +115,8 @@ struct PlanDetailView: View {
     @State private var searchText = ""
     @State private var currentLabelTab: String = ""
     @State private var activeSheet: ActiveSheet?
+    @State private var showAddedToast: Bool = false
+    @State private var addedToastCount: Int = 0
 
     private enum ActiveSheet: String, Identifiable { case chooseLibrary, quickLibrary; var id: String { rawValue } }
 
@@ -178,6 +180,20 @@ struct PlanDetailView: View {
                             activeSheet = .quickLibrary
                         } label: { Label("הוסף מתרגילים מוכרים ל-\(currentLabelTab)", systemImage: "plus.circle") }
                     }
+                    if plan.exercises.isEmpty {
+                        Button {
+                            let basic = basicSeedExercises()
+                            var addedCount = 0
+                            for item in basic {
+                                let label = currentLabelTab.isEmpty ? plan.planType.workoutLabels.first : currentLabelTab
+                                if !plan.exercises.contains(where: { $0.name.caseInsensitiveCompare(item.name) == .orderedSame && ($0.label ?? label) == label }) {
+                                    plan.exercises.append(Exercise(name: item.name, plannedSets: 3, plannedReps: 8, notes: nil, label: label, muscleGroup: item.bodyPart.rawValue, equipment: item.equipment, isBodyweight: item.isBodyweight))
+                                    addedCount += 1
+                                }
+                            }
+                            if addedCount > 0 { addedToastCount = addedCount; showAddedToast = true }
+                        } label: { Label("הוסף רשימת בסיס ל-\(currentLabelTab.isEmpty ? (plan.planType.workoutLabels.first ?? "Full") : currentLabelTab)", systemImage: "tray.and.arrow.down") }
+                    }
                     Stepper("סטים: \(plannedSets)", value: $plannedSets, in: 1...10)
                     Stepper("חזרות: \(plannedReps)", value: $plannedReps, in: 1...20)
                     TextField("הערות", text: $notes)
@@ -194,17 +210,37 @@ struct PlanDetailView: View {
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .chooseLibrary:
-                ExercisePickerView(searchText: $searchText) { item in
-                    newExerciseName = item.name
+                ExercisePickerSheet(onAdd: { items in
+                    var addedCount = 0
+                    for item in items {
+                        let label = currentLabelTab.isEmpty ? plan.planType.workoutLabels.first : currentLabelTab
+                        if !plan.exercises.contains(where: { $0.name.caseInsensitiveCompare(item.name) == .orderedSame && ($0.label ?? label) == label }) {
+                            plan.exercises.append(Exercise(name: item.name, plannedSets: 3, plannedReps: 8, notes: nil, label: label, muscleGroup: item.bodyPart.rawValue, equipment: item.equipment, isBodyweight: item.isBodyweight))
+                            addedCount += 1
+                        }
+                    }
                     activeSheet = nil
-                }
+                    if addedCount > 0 { addedToastCount = addedCount; showAddedToast = true }
+                })
             case .quickLibrary:
-                ExercisePickerView(searchText: $searchText) { item in
-                    let ex = Exercise(name: item.name, plannedSets: 3, plannedReps: 8, notes: nil, label: currentLabelTab.isEmpty ? plan.planType.workoutLabels.first : currentLabelTab)
-                    plan.exercises.append(ex)
+                ExercisePickerSheet(onAdd: { items in
+                    var addedCount = 0
+                    for item in items {
+                        let label = currentLabelTab.isEmpty ? plan.planType.workoutLabels.first : currentLabelTab
+                        if !plan.exercises.contains(where: { $0.name.caseInsensitiveCompare(item.name) == .orderedSame && ($0.label ?? label) == label }) {
+                            plan.exercises.append(Exercise(name: item.name, plannedSets: 3, plannedReps: 8, notes: nil, label: label, muscleGroup: item.bodyPart.rawValue, equipment: item.equipment, isBodyweight: item.isBodyweight))
+                            addedCount += 1
+                        }
+                    }
                     activeSheet = nil
-                }
+                    if addedCount > 0 { addedToastCount = addedCount; showAddedToast = true }
+                })
             }
+        }
+        .alert("הוספה", isPresented: $showAddedToast) {
+            Button("סגור", role: .cancel) {}
+        } message: {
+            Text("נוספו \(addedToastCount) תרגילים")
         }
         .onAppear {
             if currentLabelTab.isEmpty { currentLabelTab = plan.planType.workoutLabels.first ?? "" }
@@ -215,6 +251,17 @@ struct PlanDetailView: View {
         let symbols = Calendar.current.weekdaySymbols
         let index = max(1, min(7, day)) - 1
         return symbols[index]
+    }
+
+    private func basicSeedExercises() -> [ExerciseLibraryItem] {
+        let groups: [ExerciseLibraryItem.BodyPart] = [.chest, .back, .shoulders, .legs, .arms, .core]
+        var result: [ExerciseLibraryItem] = []
+        for g in groups {
+            if let first = ExerciseLibrary.exercises.first(where: { $0.bodyPart == g }) {
+                result.append(first)
+            }
+        }
+        return result
     }
 }
 
@@ -250,6 +297,105 @@ struct ExercisePickerView: View {
             .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
             .navigationTitle("בחר תרגיל")
         }
+    }
+}
+
+// MARK: - Exercise Picker Sheet with filters and multi-select
+struct ExercisePickerSheet: View {
+    @State private var searchText: String = ""
+    @State private var selectedBodyPart: ExerciseLibraryItem.BodyPart? = nil
+    @State private var selectedEquipment: String? = nil
+    @State private var favoritesOnly: Bool = false
+    @State private var selection: Set<UUID> = []
+    @AppStorage("favoriteExercises") private var favoriteNamesStore: String = ""
+
+    var onAdd: ([ExerciseLibraryItem]) -> Void
+
+    private var favoriteNames: Set<String> { Set(favoriteNamesStore.split(separator: "\n").map(String.init)) }
+
+    private var equipments: [String] {
+        let eqs = ExerciseLibrary.exercises.compactMap { $0.equipment }
+        return Array(Set(eqs)).sorted()
+    }
+
+    private var filtered: [ExerciseLibraryItem] {
+        ExerciseLibrary.exercises.filter { item in
+            let matchBody = selectedBodyPart == nil || item.bodyPart == selectedBodyPart
+            let matchEq = selectedEquipment == nil || item.equipment == selectedEquipment
+            let matchFav = favoritesOnly == false || favoriteNames.contains(item.name)
+            let matchSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || item.name.localizedCaseInsensitiveContains(searchText)
+            return matchBody && matchEq && matchFav && matchSearch
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if !equipments.isEmpty || !ExerciseLibraryItem.BodyPart.allCases.isEmpty {
+                    Section("פילטרים") {
+                        Picker("קבוצת שריר", selection: Binding(get: { selectedBodyPart ?? .fullBody }, set: { selectedBodyPart = ($0 == .fullBody ? nil : $0) })) {
+                            Text("הכל").tag(ExerciseLibraryItem.BodyPart.fullBody)
+                            ForEach(ExerciseLibraryItem.BodyPart.allCases.filter { $0 != .fullBody }, id: \.self) { bp in
+                                Text(bp.rawValue).tag(bp)
+                            }
+                        }
+                        Picker("ציוד", selection: Binding(get: { selectedEquipment ?? "" }, set: { selectedEquipment = $0.isEmpty ? nil : $0 })) {
+                            Text("הכל").tag("")
+                            ForEach(equipments, id: \.self) { eq in Text(eq).tag(eq) }
+                        }
+                        Toggle("מועדפים", isOn: $favoritesOnly)
+                    }
+                }
+
+                Section("תרגילים") {
+                    ForEach(filtered) { item in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(item.name)
+                                HStack(spacing: 6) {
+                                    Text(item.bodyPart.rawValue).font(.footnote).foregroundStyle(.secondary)
+                                    if let eq = item.equipment { Text(eq).font(.footnote).foregroundStyle(.secondary) }
+                                    if item.isBodyweight { Text("משקל גוף").font(.footnote).foregroundStyle(.secondary) }
+                                }
+                            }
+                            Spacer()
+                            Button("הוסף") {
+                                onAdd([item])
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.accentColor)
+                            Button(action: {
+                                toggleFavorite(name: item.name)
+                            }) {
+                                Image(systemName: favoriteNames.contains(item.name) ? "star.fill" : "star")
+                            }
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            toggleSelect(id: item.id)
+                        }
+                    }
+                }
+            }
+            .searchable(text: $searchText)
+            .navigationTitle("בחר תרגילים")
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("הוסף נבחרים") {
+                        let picked = filtered.filter { selection.contains($0.id) }
+                        if !picked.isEmpty { onAdd(picked) }
+                    }
+                    .disabled(selection.isEmpty)
+                }
+            }
+        }
+    }
+
+    private func toggleSelect(id: UUID) { if selection.contains(id) { selection.remove(id) } else { selection.insert(id) } }
+    private func toggleFavorite(name: String) {
+        var set = favoriteNames
+        if set.contains(name) { set.remove(name) } else { set.insert(name) }
+        favoriteNamesStore = set.sorted().joined(separator: "\n")
     }
 }
 
@@ -324,6 +470,12 @@ struct WorkoutLogView: View {
     @State private var session = WorkoutSession()
     @State private var lastDefaults: [String: (reps: Int, weight: Double, rpe: Double?)] = [:]
     @State private var selectedLabel: String = ""
+    @State private var showAllLabels: Bool = false
+    @State private var logActiveSheet: LogSheet?
+    @State private var addedToastCount: Int = 0
+    @State private var showAddedToast: Bool = false
+
+    private enum LogSheet: String, Identifiable { case chooseExercises; var id: String { rawValue } }
 
     var body: some View {
         NavigationStack {
@@ -342,10 +494,11 @@ struct WorkoutLogView: View {
                             }
                         }
                         .pickerStyle(.segmented)
+                        Toggle("הצג הכל", isOn: $showAllLabels)
                     }
                     Section("אימון") {
                         let exercises = plan.exercises.filter { ex in
-                            selectedLabel.isEmpty ? true : ((ex.label ?? plan.planType.workoutLabels.first) == selectedLabel)
+                            showAllLabels || selectedLabel.isEmpty ? true : ((ex.label ?? plan.planType.workoutLabels.first) == selectedLabel)
                         }
                         ForEach(exercises) { exercise in
                             ExerciseLogRow(
@@ -357,6 +510,8 @@ struct WorkoutLogView: View {
                             )
                         }
                     }
+                    Button("בחר תרגילים") { logActiveSheet = .chooseExercises }
+                    Button("אוטופיל מהאימון האחרון") { Task { await autofillFromLast(plan: plan) } }
                     Button("שמור אימון") {
                         session.planName = plan.name
                         session.workoutLabel = selectedLabel.isEmpty ? plan.planType.workoutLabels.first : selectedLabel
@@ -376,6 +531,25 @@ struct WorkoutLogView: View {
             .onChange(of: selectedLabel) { _, _ in
                 Task { await loadLastDefaults(for: selectedPlan) }
             }
+            .sheet(item: $logActiveSheet) { _ in
+                ExercisePickerSheet(onAdd: { items in
+                    var added = 0
+                    for item in items {
+                        let name = item.name
+                        if !session.exerciseSessions.contains(where: { $0.exerciseName.caseInsensitiveCompare(name) == .orderedSame }) {
+                            session.exerciseSessions.append(ExerciseSession(exerciseName: name, setLogs: []))
+                            added += 1
+                        }
+                    }
+                    logActiveSheet = nil
+                    if added > 0 { addedToastCount = added; showAddedToast = true }
+                })
+            }
+            .alert("הוספה", isPresented: $showAddedToast) {
+                Button("סגור", role: .cancel) {}
+            } message: {
+                Text("נוספו \(addedToastCount) תרגילים ללוג")
+            }
         }
     }
 
@@ -394,6 +568,21 @@ struct WorkoutLogView: View {
                 }
             }
             lastDefaults = dict
+        }
+    }
+
+    private func autofillFromLast(plan: WorkoutPlan) async {
+        let targetName: String? = plan.name
+        let targetLabel: String? = selectedLabel.isEmpty ? plan.planType.workoutLabels.first : selectedLabel
+        var descriptor = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.planName == targetName && $0.workoutLabel == targetLabel }, sortBy: [SortDescriptor(\WorkoutSession.date, order: .reverse)])
+        descriptor.fetchLimit = 1
+        if let last = try? modelContext.fetch(descriptor).first {
+            session.exerciseSessions = last.exerciseSessions.map { old in
+                ExerciseSession(exerciseName: old.exerciseName, setLogs: old.setLogs.map { SetLog(reps: $0.reps, weight: $0.weight, rpe: $0.rpe, notes: $0.notes) })
+            }
+        } else {
+            let exercises = plan.exercises.filter { ex in selectedLabel.isEmpty ? true : ((ex.label ?? plan.planType.workoutLabels.first) == selectedLabel) }
+            session.exerciseSessions = exercises.map { ExerciseSession(exerciseName: $0.name, setLogs: []) }
         }
     }
 }

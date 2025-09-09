@@ -54,13 +54,21 @@ final class Exercise {
     var plannedReps: Int?
     var notes: String?
     var label: String?
+    var muscleGroup: String?
+    var equipment: String?
+    var isBodyweight: Bool
+    var isFavorite: Bool
 
-    init(name: String, plannedSets: Int, plannedReps: Int? = nil, notes: String? = nil, label: String? = nil) {
+    init(name: String, plannedSets: Int, plannedReps: Int? = nil, notes: String? = nil, label: String? = nil, muscleGroup: String? = nil, equipment: String? = nil, isBodyweight: Bool = false, isFavorite: Bool = false) {
         self.name = name
         self.plannedSets = plannedSets
         self.plannedReps = plannedReps
         self.notes = notes
         self.label = label
+        self.muscleGroup = muscleGroup
+        self.equipment = equipment
+        self.isBodyweight = isBodyweight
+        self.isFavorite = isFavorite
     }
 }
 
