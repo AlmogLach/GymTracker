@@ -19,8 +19,12 @@ struct GymTrackerApp: App {
             SetLog.self,
             AppSettings.self,
         ])
-        var modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-        modelConfiguration.url = URL(fileURLWithPath: "default_v2.store", relativeTo: URL.applicationSupportDirectory)
+        let modelConfiguration = ModelConfiguration(
+            "default_v2",
+            schema: schema,
+            isStoredInMemoryOnly: false,
+            allowsSave: true
+        )
 
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
@@ -32,6 +36,34 @@ struct GymTrackerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    // Add sample data if none exists
+                    let context = sharedModelContainer.mainContext
+                    let plans = try? context.fetch(FetchDescriptor<WorkoutPlan>())
+                    if plans?.isEmpty == true {
+                        let samplePlan = WorkoutPlan(
+                            name: "תוכנית בסיסית",
+                            planType: .fullBody,
+                            schedule: [
+                                PlannedDay(weekday: 1, label: "Full"),
+                                PlannedDay(weekday: 3, label: "Full"),
+                                PlannedDay(weekday: 5, label: "Full")
+                            ]
+                        )
+                        context.insert(samplePlan)
+                        
+                        let sampleExercise = Exercise(
+                            name: "סקוואט",
+                            plannedSets: 3,
+                            plannedReps: 10,
+                            label: "Full"
+                        )
+                        context.insert(sampleExercise)
+                        samplePlan.exercises.append(sampleExercise)
+                        
+                        try? context.save()
+                    }
+                }
         }
         .modelContainer(sharedModelContainer)
     }
