@@ -161,6 +161,11 @@ struct PlanDetailView: View {
                             if let reps = exercise.plannedReps { Text("חזרות: \(reps)") }
                             if let lbl = exercise.label, !lbl.isEmpty { Text("(\(lbl))") }
                         }
+                        HStack(spacing: 6) {
+                            if let mg = exercise.muscleGroup { Text(mg).font(.footnote).foregroundStyle(.secondary) }
+                            if let eq = exercise.equipment { Text(eq).font(.footnote).foregroundStyle(.secondary) }
+                            if exercise.isBodyweight { Text("משקל גוף").font(.footnote).foregroundStyle(.secondary) }
+                        }
                         if let n = exercise.notes, !n.isEmpty { Text(n).font(.footnote).foregroundStyle(.secondary) }
                     }
                 }
@@ -180,20 +185,7 @@ struct PlanDetailView: View {
                             activeSheet = .quickLibrary
                         } label: { Label("הוסף מתרגילים מוכרים ל-\(currentLabelTab)", systemImage: "plus.circle") }
                     }
-                    if plan.exercises.isEmpty {
-                        Button {
-                            let basic = basicSeedExercises()
-                            var addedCount = 0
-                            for item in basic {
-                                let label = currentLabelTab.isEmpty ? plan.planType.workoutLabels.first : currentLabelTab
-                                if !plan.exercises.contains(where: { $0.name.caseInsensitiveCompare(item.name) == .orderedSame && ($0.label ?? label) == label }) {
-                                    plan.exercises.append(Exercise(name: item.name, plannedSets: 3, plannedReps: 8, notes: nil, label: label, muscleGroup: item.bodyPart.rawValue, equipment: item.equipment, isBodyweight: item.isBodyweight))
-                                    addedCount += 1
-                                }
-                            }
-                            if addedCount > 0 { addedToastCount = addedCount; showAddedToast = true }
-                        } label: { Label("הוסף רשימת בסיס ל-\(currentLabelTab.isEmpty ? (plan.planType.workoutLabels.first ?? "Full") : currentLabelTab)", systemImage: "tray.and.arrow.down") }
-                    }
+                    
                     Stepper("סטים: \(plannedSets)", value: $plannedSets, in: 1...10)
                     Stepper("חזרות: \(plannedReps)", value: $plannedReps, in: 1...20)
                     TextField("הערות", text: $notes)
@@ -253,16 +245,7 @@ struct PlanDetailView: View {
         return symbols[index]
     }
 
-    private func basicSeedExercises() -> [ExerciseLibraryItem] {
-        let groups: [ExerciseLibraryItem.BodyPart] = [.chest, .back, .shoulders, .legs, .arms, .core]
-        var result: [ExerciseLibraryItem] = []
-        for g in groups {
-            if let first = ExerciseLibrary.exercises.first(where: { $0.bodyPart == g }) {
-                result.append(first)
-            }
-        }
-        return result
-    }
+    
 }
 
 struct ExercisePickerView: View {
@@ -308,6 +291,7 @@ struct ExercisePickerSheet: View {
     @State private var favoritesOnly: Bool = false
     @State private var selection: Set<UUID> = []
     @AppStorage("favoriteExercises") private var favoriteNamesStore: String = ""
+    @State private var showCreate: Bool = false
 
     var onAdd: ([ExerciseLibraryItem]) -> Void
 
@@ -387,6 +371,14 @@ struct ExercisePickerSheet: View {
                     }
                     .disabled(selection.isEmpty)
                 }
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("הוסף תרגיל חדש") { showCreate = true }
+                }
+            }
+            .sheet(isPresented: $showCreate) {
+                NewExerciseQuickView { newItem in
+                    onAdd([newItem])
+                }
             }
         }
     }
@@ -396,6 +388,43 @@ struct ExercisePickerSheet: View {
         var set = favoriteNames
         if set.contains(name) { set.remove(name) } else { set.insert(name) }
         favoriteNamesStore = set.sorted().joined(separator: "\n")
+    }
+}
+
+// Quick create custom exercise
+struct NewExerciseQuickView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var name: String = ""
+    @State private var bodyPart: ExerciseLibraryItem.BodyPart = .fullBody
+    @State private var equipment: String = ""
+    @State private var isBodyweight: Bool = false
+    var onCreate: (ExerciseLibraryItem) -> Void
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                TextField("שם התרגיל", text: $name)
+                Picker("קבוצת שריר", selection: $bodyPart) {
+                    ForEach(ExerciseLibraryItem.BodyPart.allCases, id: \.self) { bp in
+                        Text(bp.rawValue).tag(bp)
+                    }
+                }
+                TextField("ציוד (אופציונלי)", text: $equipment)
+                Toggle("משקל גוף", isOn: $isBodyweight)
+            }
+            .navigationTitle("תרגיל חדש")
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("ביטול") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("הוסף") {
+                        let item = ExerciseLibraryItem(name: name, bodyPart: bodyPart, equipment: equipment.isEmpty ? nil : equipment, isBodyweight: isBodyweight)
+                        onCreate(item)
+                        dismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
     }
 }
 
