@@ -495,6 +495,7 @@ struct PlanEditView: View {
 struct WorkoutLogView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var plans: [WorkoutPlan]
+    @Query private var settingsList: [AppSettings]
     @State private var selectedPlan: WorkoutPlan?
     @State private var session = WorkoutSession()
     @State private var lastDefaults: [String: (reps: Int, weight: Double, rpe: Double?)] = [:]
@@ -540,7 +541,7 @@ struct WorkoutLogView: View {
                         }
                     }
                     Button("בחר תרגילים") { logActiveSheet = .chooseExercises }
-                    Button("אוטופיל מהאימון האחרון") { Task { await autofillFromLast(plan: plan) } }
+                    Button("אוטופיל חכם") { Task { await smartAutofill(plan: plan) } }
                     Button("שמור אימון") {
                         session.planName = plan.name
                         session.workoutLabel = selectedLabel.isEmpty ? plan.planType.workoutLabels.first : selectedLabel
@@ -600,20 +601,95 @@ struct WorkoutLogView: View {
         }
     }
 
-    private func autofillFromLast(plan: WorkoutPlan) async {
+    private var appSettings: AppSettings { settingsList.first ?? AppSettings() }
+
+    private func smartAutofill(plan: WorkoutPlan) async {
         let targetName: String? = plan.name
         let targetLabel: String? = selectedLabel.isEmpty ? plan.planType.workoutLabels.first : selectedLabel
         var descriptor = FetchDescriptor<WorkoutSession>(predicate: #Predicate { $0.planName == targetName && $0.workoutLabel == targetLabel }, sortBy: [SortDescriptor(\WorkoutSession.date, order: .reverse)])
-        descriptor.fetchLimit = 1
-        if let last = try? modelContext.fetch(descriptor).first {
-            session.exerciseSessions = last.exerciseSessions.map { old in
-                ExerciseSession(exerciseName: old.exerciseName, setLogs: old.setLogs.map { SetLog(reps: $0.reps, weight: $0.weight, rpe: $0.rpe, notes: $0.notes) })
+        descriptor.fetchLimit = 3
+        let history = (try? modelContext.fetch(descriptor)) ?? []
+
+        let exercises = plan.exercises.filter { ex in selectedLabel.isEmpty ? true : ((ex.label ?? plan.planType.workoutLabels.first) == selectedLabel) }
+
+        var newSessions: [ExerciseSession] = []
+        for ex in exercises {
+            let name = ex.name
+            var recentSets: [SetLog] = []
+            for s in history {
+                if let exSes = s.exerciseSessions.first(where: { $0.exerciseName.caseInsensitiveCompare(name) == .orderedSame }) {
+                    recentSets.append(contentsOf: exSes.setLogs)
+                }
             }
-        } else {
-            let exercises = plan.exercises.filter { ex in selectedLabel.isEmpty ? true : ((ex.label ?? plan.planType.workoutLabels.first) == selectedLabel) }
-            session.exerciseSessions = exercises.map { ExerciseSession(exerciseName: $0.name, setLogs: []) }
+
+            let defaultReps = ex.plannedReps ?? 8
+            let repsMin = max(1, defaultReps - 2)
+            let repsMax = defaultReps + 2
+            let topSet: SetLog? = recentSets
+                .filter { !$0.isWarmup && $0.reps >= repsMin && $0.reps <= repsMax }
+                .max(by: { $0.weight < $1.weight })
+
+            let targetSets = max(1, ex.plannedSets)
+            var generated: [SetLog] = []
+
+            if let top = topSet {
+                let isDumbbell = (ex.equipment ?? "").localizedCaseInsensitiveContains("דאמ") || (ex.equipment ?? "").localizedCaseInsensitiveContains("dumbbell")
+                let next = computeNextTopSet(from: top, defaultReps: defaultReps, equipment: ex.equipment, isDumbbell: isDumbbell)
+                generated.append(next)
+                for _ in 1..<targetSets {
+                    let backoffWeight = max(0, next.weight * 0.975)
+                    generated.append(SetLog(reps: next.reps, weight: roundToIncrement(backoffWeight, equipment: ex.equipment, isDumbbell: isDumbbell), rpe: nil, notes: nil, restSeconds: appSettings.defaultRestSeconds, isWarmup: false))
+                }
+            } else {
+                for _ in 0..<targetSets {
+                    generated.append(SetLog(reps: defaultReps, weight: 0, rpe: nil, notes: nil, restSeconds: appSettings.defaultRestSeconds, isWarmup: false))
+                }
+            }
+
+            newSessions.append(ExerciseSession(exerciseName: name, setLogs: generated))
+        }
+
+        session.exerciseSessions = newSessions
+    }
+
+    private func computeNextTopSet(from top: SetLog, defaultReps: Int, equipment: String?, isDumbbell: Bool) -> SetLog {
+        switch appSettings.autoProgressionMode {
+        case .percent:
+            let progressed = top.weight * (1.0 + appSettings.autoProgressionPercent / 100.0)
+            let rounded = roundToIncrement(progressed, equipment: equipment, isDumbbell: isDumbbell)
+            return SetLog(reps: defaultReps, weight: rounded, rpe: top.rpe, notes: nil, restSeconds: appSettings.defaultRestSeconds, isWarmup: false)
+        case .repCycle:
+            let repsMin = max(1, defaultReps - 2)
+            let repsMax = defaultReps + 2
+            if top.reps < repsMax {
+                let reps = min(repsMax, top.reps + 1)
+                return SetLog(reps: reps, weight: top.weight, rpe: top.rpe, notes: nil, restSeconds: appSettings.defaultRestSeconds, isWarmup: false)
+            } else {
+                let incWeight = roundToIncrement(top.weight + increment(for: equipment, isDumbbell: isDumbbell), equipment: equipment, isDumbbell: isDumbbell)
+                return SetLog(reps: repsMin, weight: incWeight, rpe: top.rpe, notes: nil, restSeconds: appSettings.defaultRestSeconds, isWarmup: false)
+            }
         }
     }
+
+    private func roundToIncrement(_ weight: Double, equipment: String?, isDumbbell: Bool) -> Double {
+        let unit = appSettings.weightUnit
+        let inc = increment(for: equipment, isDumbbell: isDumbbell)
+        let display = unit.toDisplay(fromKg: weight)
+        let roundedDisplay = (display / inc).rounded() * inc
+        return unit.toKg(fromDisplay: roundedDisplay)
+    }
+
+    private func increment(for equipment: String?, isDumbbell: Bool) -> Double {
+        let unit = appSettings.weightUnit
+        if isDumbbell {
+            return unit == .kg ? appSettings.dumbbellIncrementKg : appSettings.dumbbellIncrementLb
+        } else {
+            return unit == .kg ? appSettings.weightIncrementKg : appSettings.weightIncrementLb
+        }
+    }
+
+    private func estimate1RM_Epley(weight: Double, reps: Int) -> Double { weight * (1.0 + Double(reps) / 30.0) }
+    private func estimate1RM_Brzycki(weight: Double, reps: Int) -> Double { weight * 36.0 / (37.0 - Double(reps)) }
 }
 
 struct ExerciseLogRow: View {
