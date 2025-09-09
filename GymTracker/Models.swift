@@ -77,12 +77,18 @@ final class WorkoutSession {
     var date: Date
     var planName: String?
     var workoutLabel: String?
+    var durationSeconds: Int?
+    var notes: String?
+    var isCompleted: Bool
     @Relationship(deleteRule: .cascade) var exerciseSessions: [ExerciseSession]
 
-    init(date: Date = Date(), planName: String? = nil, workoutLabel: String? = nil, exerciseSessions: [ExerciseSession] = []) {
+    init(date: Date = Date(), planName: String? = nil, workoutLabel: String? = nil, durationSeconds: Int? = nil, notes: String? = nil, isCompleted: Bool = false, exerciseSessions: [ExerciseSession] = []) {
         self.date = date
         self.planName = planName
         self.workoutLabel = workoutLabel
+        self.durationSeconds = durationSeconds
+        self.notes = notes
+        self.isCompleted = isCompleted
         self.exerciseSessions = exerciseSessions
     }
 }
@@ -104,12 +110,16 @@ final class SetLog {
     var weight: Double
     var rpe: Double?
     var notes: String?
+    var restSeconds: Int?
+    var isWarmup: Bool
 
-    init(reps: Int, weight: Double, rpe: Double? = nil, notes: String? = nil) {
+    init(reps: Int, weight: Double, rpe: Double? = nil, notes: String? = nil, restSeconds: Int? = nil, isWarmup: Bool = false) {
         self.reps = reps
         self.weight = weight
         self.rpe = rpe
         self.notes = notes
+        self.restSeconds = restSeconds
+        self.isWarmup = isWarmup
     }
 }
 
@@ -119,6 +129,7 @@ final class AppSettings {
         case kg
         case lb
     }
+    enum AutoProgressionMode: String, Codable, CaseIterable { case percent, repCycle }
 
     var weightUnitRaw: String
 
@@ -127,8 +138,36 @@ final class AppSettings {
         set { weightUnitRaw = newValue.rawValue }
     }
 
-    init(weightUnit: WeightUnit = .kg) {
+    // Rest and progression settings
+    var defaultRestSeconds: Int
+    var weightIncrementKg: Double
+    var weightIncrementLb: Double
+    var dumbbellIncrementKg: Double
+    var dumbbellIncrementLb: Double
+    var autoProgressionModeRaw: String
+    var autoProgressionPercent: Double
+
+    var autoProgressionMode: AutoProgressionMode {
+        get { AutoProgressionMode(rawValue: autoProgressionModeRaw) ?? .percent }
+        set { autoProgressionModeRaw = newValue.rawValue }
+    }
+
+    init(weightUnit: WeightUnit = .kg,
+         defaultRestSeconds: Int = 120,
+         weightIncrementKg: Double = 2.5,
+         weightIncrementLb: Double = 5,
+         dumbbellIncrementKg: Double = 1.0,
+         dumbbellIncrementLb: Double = 2.5,
+         autoProgressionMode: AutoProgressionMode = .percent,
+         autoProgressionPercent: Double = 2.5) {
         self.weightUnitRaw = weightUnit.rawValue
+        self.defaultRestSeconds = defaultRestSeconds
+        self.weightIncrementKg = weightIncrementKg
+        self.weightIncrementLb = weightIncrementLb
+        self.dumbbellIncrementKg = dumbbellIncrementKg
+        self.dumbbellIncrementLb = dumbbellIncrementLb
+        self.autoProgressionModeRaw = autoProgressionMode.rawValue
+        self.autoProgressionPercent = autoProgressionPercent
     }
 }
 
