@@ -19,7 +19,8 @@ struct GymTrackerApp: App {
             SetLog.self,
             AppSettings.self,
         ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        var modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        modelConfiguration.url = URL(fileURLWithPath: "default_v2.store", relativeTo: URL.applicationSupportDirectory)
 
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])

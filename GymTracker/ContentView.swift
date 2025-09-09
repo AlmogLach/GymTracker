@@ -735,21 +735,73 @@ struct ExerciseLogRow: View {
     var body: some View {
         VStack(alignment: .leading) {
             Text(exerciseName).font(.headline)
-            HStack {
+            HStack(spacing: 8) {
                 TextField("חזרות", text: $reps).keyboardType(.numberPad)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 70)
                 TextField("משקל (\(unit.symbol))", text: $weight).keyboardType(.decimalPad)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 120)
                 TextField("RPE", text: $rpe).keyboardType(.decimalPad)
-                Button("הוסף") { addSet() }
-                    .disabled(Int(reps) == nil || Double(weight) == nil)
+                    .textFieldStyle(.roundedBorder)
+                    .frame(maxWidth: 80)
+                Button {
+                    addSet()
+                } label: { Label("הוסף", systemImage: "plus.circle.fill") }
+                .disabled(Int(reps) == nil || Double(weight) == nil)
             }
+            .padding(.bottom, 4)
+
             if let idx = session.exerciseSessions.firstIndex(where: { $0.exerciseName == exerciseName }) {
                 let sets = session.exerciseSessions[idx].setLogs
                 if !sets.isEmpty {
-                    ForEach(Array(sets.enumerated()), id: \.offset) { entry in
-                        let set = entry.element
-                        Text("סט \(entry.offset + 1): \(set.reps)x\(Int(displayWeight(set.weight))) \(unit.symbol)" + (set.rpe != nil ? " RPE \(String(format: "%.1f", set.rpe!))" : ""))
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(Array(sets.enumerated()), id: \.offset) { entry in
+                            let setIndex = entry.offset
+                            let repsBinding = Binding<Int>(
+                                get: { session.exerciseSessions[idx].setLogs[setIndex].reps },
+                                set: { session.exerciseSessions[idx].setLogs[setIndex].reps = $0 }
+                            )
+                            let rpeHalfSteps = Binding<Int>(
+                                get: { Int(((session.exerciseSessions[idx].setLogs[setIndex].rpe ?? 0) * 2).rounded()) },
+                                set: { session.exerciseSessions[idx].setLogs[setIndex].rpe = Double($0) / 2.0 }
+                            )
+                            HStack(spacing: 10) {
+                                Text("סט \(setIndex + 1)")
+                                    .frame(width: 44, alignment: .leading)
+                                Stepper(value: repsBinding, in: 1...100) {
+                                    Text("חזרות: \(session.exerciseSessions[idx].setLogs[setIndex].reps)")
+                                }
+                                .frame(maxWidth: 170, alignment: .leading)
+
+                                // Weight adjust with +/- buttons to avoid heavy bindings
+                                let displayW = Int(displayWeight(session.exerciseSessions[idx].setLogs[setIndex].weight))
+                                HStack(spacing: 6) {
+                                    Text("משקל: \(displayW) \(unit.symbol)")
+                                    Button { adjustWeight(idx, setIndex, delta: -weightStep) } label: { Image(systemName: "minus.circle") }
+                                    Button { adjustWeight(idx, setIndex, delta: weightStep) } label: { Image(systemName: "plus.circle") }
+                                }
+                                .frame(maxWidth: 220, alignment: .leading)
+
+                                Stepper(value: rpeHalfSteps, in: 0...20) {
+                                    Text("RPE: \(String(format: "%.1f", session.exerciseSessions[idx].setLogs[setIndex].rpe ?? 0))")
+                                }
+                                Toggle("חימום", isOn: Binding(
+                                    get: { session.exerciseSessions[idx].setLogs[setIndex].isWarmup },
+                                    set: { session.exerciseSessions[idx].setLogs[setIndex].isWarmup = $0 }
+                                ))
+                                .toggleStyle(.switch)
+                                .frame(maxWidth: 100)
+                                Button(role: .destructive) {
+                                    session.exerciseSessions[idx].setLogs.remove(at: setIndex)
+                                } label: { Image(systemName: "trash") }
+                            }
+                        }
+                        HStack(spacing: 12) {
+                            Button { duplicateLastSet(at: idx) } label: { Label("שכפל אחרון", systemImage: "doc.on.doc") }
+                            Button(role: .destructive) { clearAllSets(at: idx) } label: { Label("נקה הכל", systemImage: "trash") }
+                        }
+                        .padding(.top, 4)
                     }
                 }
             }
@@ -775,6 +827,24 @@ struct ExerciseLogRow: View {
     private var unit: AppSettings.WeightUnit { settingsList.first?.weightUnit ?? .kg }
     private func displayWeight(_ kg: Double) -> Double { unit.toDisplay(fromKg: kg) }
     private func inputWeightKg() -> Double { unit.toKg(fromDisplay: Double(weight) ?? 0) }
+    private var weightStep: Double { unit == .kg ? 2.5 : 5.0 }
+
+    private func duplicateLastSet(at exerciseIdx: Int) {
+        guard let last = session.exerciseSessions[exerciseIdx].setLogs.last else { return }
+        session.exerciseSessions[exerciseIdx].setLogs.append(SetLog(reps: last.reps, weight: last.weight, rpe: last.rpe, notes: last.notes, restSeconds: last.restSeconds, isWarmup: last.isWarmup))
+    }
+
+    private func clearAllSets(at exerciseIdx: Int) {
+        session.exerciseSessions[exerciseIdx].setLogs.removeAll()
+    }
+
+    private func adjustWeight(_ exerciseIdx: Int, _ setIndex: Int, delta: Double) {
+        let unit = self.unit
+        let currentKg = session.exerciseSessions[exerciseIdx].setLogs[setIndex].weight
+        let newDisplay = unit.toDisplay(fromKg: currentKg) + delta
+        let roundedDisplay = (newDisplay / weightStep).rounded() * weightStep
+        session.exerciseSessions[exerciseIdx].setLogs[setIndex].weight = unit.toKg(fromDisplay: roundedDisplay)
+    }
 }
 
 struct ProgressViewScreen: View {

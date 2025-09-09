@@ -56,10 +56,10 @@ final class Exercise {
     var label: String?
     var muscleGroup: String?
     var equipment: String?
-    var isBodyweight: Bool
-    var isFavorite: Bool
+    var isBodyweight: Bool?
+    var isFavorite: Bool?
 
-    init(name: String, plannedSets: Int, plannedReps: Int? = nil, notes: String? = nil, label: String? = nil, muscleGroup: String? = nil, equipment: String? = nil, isBodyweight: Bool = false, isFavorite: Bool = false) {
+    init(name: String, plannedSets: Int, plannedReps: Int? = nil, notes: String? = nil, label: String? = nil, muscleGroup: String? = nil, equipment: String? = nil, isBodyweight: Bool? = nil, isFavorite: Bool? = nil) {
         self.name = name
         self.plannedSets = plannedSets
         self.plannedReps = plannedReps
@@ -79,10 +79,10 @@ final class WorkoutSession {
     var workoutLabel: String?
     var durationSeconds: Int?
     var notes: String?
-    var isCompleted: Bool
+    var isCompleted: Bool?
     @Relationship(deleteRule: .cascade) var exerciseSessions: [ExerciseSession]
 
-    init(date: Date = Date(), planName: String? = nil, workoutLabel: String? = nil, durationSeconds: Int? = nil, notes: String? = nil, isCompleted: Bool = false, exerciseSessions: [ExerciseSession] = []) {
+    init(date: Date = Date(), planName: String? = nil, workoutLabel: String? = nil, durationSeconds: Int? = nil, notes: String? = nil, isCompleted: Bool? = nil, exerciseSessions: [ExerciseSession] = []) {
         self.date = date
         self.planName = planName
         self.workoutLabel = workoutLabel
@@ -111,9 +111,9 @@ final class SetLog {
     var rpe: Double?
     var notes: String?
     var restSeconds: Int?
-    var isWarmup: Bool
+    var isWarmup: Bool?
 
-    init(reps: Int, weight: Double, rpe: Double? = nil, notes: String? = nil, restSeconds: Int? = nil, isWarmup: Bool = false) {
+    init(reps: Int, weight: Double, rpe: Double? = nil, notes: String? = nil, restSeconds: Int? = nil, isWarmup: Bool? = nil) {
         self.reps = reps
         self.weight = weight
         self.rpe = rpe
