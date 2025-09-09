@@ -542,6 +542,7 @@ struct WorkoutLogView: View {
                     }
                     Button("בחר תרגילים") { logActiveSheet = .chooseExercises }
                     Button("אוטופיל חכם") { Task { await smartAutofill(plan: plan) } }
+                    Button("הוסף חימום") { addWarmupRamp(plan: plan) }
                     Button("שמור אימון") {
                         session.planName = plan.name
                         session.workoutLabel = selectedLabel.isEmpty ? plan.planType.workoutLabels.first : selectedLabel
@@ -690,6 +691,34 @@ struct WorkoutLogView: View {
 
     private func estimate1RM_Epley(weight: Double, reps: Int) -> Double { weight * (1.0 + Double(reps) / 30.0) }
     private func estimate1RM_Brzycki(weight: Double, reps: Int) -> Double { weight * 36.0 / (37.0 - Double(reps)) }
+
+    // MARK: - Warmup Ramp (optional)
+    private func addWarmupRamp(plan: WorkoutPlan) {
+        let percents: [Double] = [0.40, 0.55, 0.70, 0.80, 0.90]
+        let reps: [Int] = [8, 5, 3, 2, 1]
+        let rest = max(45, min(60, appSettings.defaultRestSeconds))
+
+        for i in 0..<session.exerciseSessions.count {
+            let name = session.exerciseSessions[i].exerciseName
+            guard let exercise = plan.exercises.first(where: { $0.name.caseInsensitiveCompare(name) == .orderedSame }) else { continue }
+            let isDumbbell = (exercise.equipment ?? "").localizedCaseInsensitiveContains("דאמ") || (exercise.equipment ?? "").localizedCaseInsensitiveContains("dumbbell")
+
+            // Skip if warmups already exist
+            if session.exerciseSessions[i].setLogs.contains(where: { $0.isWarmup }) { continue }
+
+            // Need a target working set weight
+            guard let firstWork = session.exerciseSessions[i].setLogs.first(where: { !$0.isWarmup && $0.weight > 0 }) else { continue }
+            let target = firstWork.weight
+
+            var warmups: [SetLog] = []
+            for (p, r) in zip(percents, reps) {
+                let w = roundToIncrement(target * p, equipment: exercise.equipment, isDumbbell: isDumbbell)
+                warmups.append(SetLog(reps: r, weight: w, rpe: nil, notes: nil, restSeconds: rest, isWarmup: true))
+            }
+
+            session.exerciseSessions[i].setLogs.insert(contentsOf: warmups, at: 0)
+        }
+    }
 }
 
 struct ExerciseLogRow: View {
