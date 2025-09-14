@@ -84,3 +84,67 @@ struct EmptyStateView: View {
         .frame(maxWidth: .infinity)
     }
 }
+
+struct StatTile: View {
+    let value: String
+    let label: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundStyle(color)
+            
+            Text(value)
+                .font(.title3)
+                .fontWeight(.bold)
+            
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(Color(.secondarySystemGroupedBackground))
+        .cornerRadius(12)
+    }
+}
+
+struct DayChip: View {
+    let day: PlannedDay
+    let isSelected: Bool
+    
+    init(day: PlannedDay, isSelected: Bool = false) {
+        self.day = day
+        self.isSelected = isSelected
+    }
+    
+    var body: some View {
+        VStack(spacing: 2) {
+            Text(dayAbbreviation(day.weekday))
+                .font(.caption2)
+                .fontWeight(.semibold)
+            
+            if !day.label.isEmpty {
+                Text(day.label)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+            }
+        }
+        .padding(.horizontal, AppTheme.s8)
+        .padding(.vertical, 4)
+        .background(isSelected ? AppTheme.accent : AppTheme.accent.opacity(0.1))
+        .foregroundStyle(isSelected ? .white : AppTheme.accent)
+        .cornerRadius(8)
+        .frame(minWidth: 28)
+    }
+    
+    private func dayAbbreviation(_ weekday: Int) -> String {
+        let dayNames = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ש׳"]
+        let index = max(1, min(7, weekday)) - 1
+        return dayNames[index]
+    }
+}

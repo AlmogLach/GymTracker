@@ -16,83 +16,191 @@ struct PlansView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: AppTheme.s16) {
+                VStack(spacing: 16) {
                     if plans.isEmpty {
                         EmptyStateView(
                             iconSystemName: "list.bullet.rectangle",
-                            title: "אין תוכניות",
-                            buttonTitle: "תוכנית חדשה"
+                            title: "אין תוכניות אימון",
+                            message: "צור תוכנית אימון ראשונה כדי להתחיל",
+                            buttonTitle: "צור תוכנית חדשה"
                         ) {
                             isPresentingNew = true
                         }
-                        .appCard()
+                        .padding(32)
                     } else {
-                        ForEach(plans.sorted(by: { $0.name < $1.name })) { plan in
-                            NavigationLink(destination: PlanDetailView(plan: plan)) {
-                                PlanCard(
-                                    name: plan.name,
-                                    type: plan.planType,
-                                    exerciseCount: plan.exercises.count,
-                                    daysCount: plan.schedule.count
-                                )
+                        // Plans grid
+                        LazyVStack(spacing: 12) {
+                            ForEach(plans.sorted(by: { $0.name < $1.name })) { plan in
+                                NavigationLink(destination: PlanDetailView(plan: plan)) {
+                                    ModernPlanCard(plan: plan)
+                                }
+                                .buttonStyle(PlainButtonStyle())
                             }
-                            .buttonStyle(PlainButtonStyle())
                         }
                     }
                 }
-                .padding(.top, AppTheme.s16)
-                .padding(.bottom, 100) // Space for safeAreaInset
+                .padding(16)
+                .padding(.bottom, 100)
             }
-            .background(AppTheme.screenBG)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("תוכניות")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { isPresentingNew = true }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.title2)
+                            .foregroundStyle(.blue)
+                    }
+                }
+            }
             .sheet(isPresented: $isPresentingNew) {
                 NewPlanSheet()
             }
             .safeAreaInset(edge: .bottom) {
-                PrimaryButton(title: "תוכנית חדשה") {
-                    isPresentingNew = true
+                VStack(spacing: 0) {
+                    Divider()
+                    
+                    Button(action: { isPresentingNew = true }) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 16, weight: .semibold))
+                            Text("תוכנית חדשה")
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(.blue)
+                        .cornerRadius(16)
+                    }
+                    .padding(20)
                 }
-                .padding(.horizontal, AppTheme.s16)
-                .padding(.bottom, AppTheme.s16)
-                .background(AppTheme.screenBG)
+                .background(.regularMaterial)
             }
         }
     }
 }
 
-struct PlanCard: View {
-    let name: String
-    let type: PlanType
-    let exerciseCount: Int
-    let daysCount: Int
+struct ModernPlanCard: View {
+    let plan: WorkoutPlan
     
     var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s8) {
-            HStack {
-                Text(name)
-                    .font(.headline)
-                    .fontWeight(.bold)
+        VStack(spacing: 0) {
+            // Header section
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(plan.name)
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .multilineTextAlignment(.leading)
+                        
+                        Text(plan.planType.rawValue)
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    // Status indicator
+                    ZStack {
+                        Circle()
+                            .fill(.blue.opacity(0.1))
+                            .frame(width: 50, height: 50)
+                        
+                        Image(systemName: "dumbbell.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.blue)
+                    }
+                }
                 
-                Spacer()
-                
-                PillBadge(text: type.rawValue)
-            }
-            
-            HStack {
-                PillBadge(text: "\(exerciseCount) תרגילים", icon: "dumbbell")
-                
-                Spacer()
-                
-                if daysCount > 0 {
-                    PillBadge(text: "\(daysCount) ימים", icon: "calendar")
+                // Stats chips
+                HStack(spacing: 8) {
+                    StatChip(
+                        value: "\(plan.exercises.count)",
+                        label: "תרגילים",
+                        icon: "list.bullet",
+                        color: .green
+                    )
+                    
+                    if plan.schedule.count > 0 {
+                        StatChip(
+                            value: "\(plan.schedule.count)",
+                            label: "ימים",
+                            icon: "calendar",
+                            color: .orange
+                        )
+                    }
+                    
+                    Spacer()
+                    
+                    // Arrow indicator
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.secondary)
                 }
             }
+            .padding(20)
+            .background(.white.opacity(0.5))
+            
+            Divider()
+            
+            // Schedule preview (if available)
+            if !plan.schedule.isEmpty {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("לוח זמנים")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    
+                    HStack(spacing: 6) {
+                        ForEach(plan.schedule.sorted(by: { $0.weekday < $1.weekday }), id: \.weekday) { day in
+                            DayChip(day: day, isSelected: false)
+                        }
+                        
+                        Spacer()
+                    }
+                }
+                .padding(20)
+            }
         }
-        .appCard()
+        .background(Color(.tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+    }
+}
+
+struct StatChip: View {
+    let value: String
+    let label: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(color)
+            
+            Text(value)
+                .font(.system(size: 14, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+            
+            Text(label)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(color.opacity(0.1))
+        .cornerRadius(12)
     }
 }
 
 struct PlanDetailView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
     @Bindable var plan: WorkoutPlan
     @State private var newExerciseName: String = ""
     @State private var plannedSets: Int = 3
@@ -104,15 +212,54 @@ struct PlanDetailView: View {
     @State private var activeSheet: ActiveSheet?
     @State private var showAddedToast: Bool = false
     @State private var addedToastCount: Int = 0
+    @State private var editingExercise: Exercise?
+    @State private var showDeleteConfirmation = false
 
-    private enum ActiveSheet: String, Identifiable { case chooseLibrary, quickLibrary; var id: String { rawValue } }
+    private enum ActiveSheet: String, Identifiable { 
+        case chooseLibrary, quickLibrary
+        var id: String { rawValue } 
+    }
 
     var body: some View {
-        Form {
-            planInfoSection
-            exercisesSection
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 16) {
+                    modernPlanInfoCard
+                    modernExercisesCard
+                }
+                .padding(16)
+                .padding(.bottom, 32)
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle(plan.name)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("מחק תוכנית", role: .destructive) {
+                        showDeleteConfirmation = true
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("הוסף תרגיל") {
+                        activeSheet = .chooseLibrary
+                    }
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                }
+            }
+            .confirmationDialog("מחיקת תוכנית", isPresented: $showDeleteConfirmation) {
+                Button("מחק תוכנית", role: .destructive) {
+                    modelContext.delete(plan)
+                    dismiss()
+                }
+                Button("ביטול", role: .cancel) {}
+            } message: {
+                Text("האם אתה בטוח שברצונך למחוק את התוכנית '\(plan.name)'? פעולה זו לא ניתנת לביטול.")
+            }
         }
-        .navigationTitle(plan.name)
         .sheet(item: $activeSheet) { sheet in
             switch sheet {
             case .chooseLibrary:
@@ -148,88 +295,289 @@ struct PlanDetailView: View {
         } message: {
             Text("נוספו \(addedToastCount) תרגילים")
         }
+        .sheet(item: Binding<Exercise?>(
+            get: { editingExercise },
+            set: { editingExercise = $0 }
+        )) { exercise in
+            ExerciseEditSheet(
+                exercise: exercise,
+                onSave: { updatedExercise in
+                    if let index = plan.exercises.firstIndex(where: { $0.id == updatedExercise.id }) {
+                        plan.exercises[index] = updatedExercise
+                    }
+                    editingExercise = nil
+                },
+                onCancel: {
+                    editingExercise = nil
+                }
+            )
+        }
         .onAppear {
             if currentLabelTab.isEmpty { currentLabelTab = plan.planType.workoutLabels.first ?? "" }
         }
     }
     
-    private var planInfoSection: some View {
-        Section("שם תוכנית") {
-            TextField("שם", text: $plan.name)
-            HStack {
-                Text("סוג:")
-                Text(plan.planType.rawValue)
-            }
-            if !plan.schedule.isEmpty {
-                VStack(alignment: .leading) {
-                    Text("לו" + "" + "ז:")
-                    ForEach(plan.schedule.sorted(by: { $0.weekday < $1.weekday }), id: \.self) { d in
-                        Text("\(weekdayName(d.weekday)) – \(d.label)")
-                            .font(.footnote)
+    private var modernPlanInfoCard: some View {
+        VStack(spacing: 0) {
+            // Header section
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("פרטי התוכנית")
+                            .font(.caption)
+                            .fontWeight(.medium)
                             .foregroundStyle(.secondary)
+                            .textCase(.uppercase)
+                        
+                        TextField("שם התוכנית", text: $plan.name)
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .textFieldStyle(.plain)
                     }
+                    
+                    Spacer()
+                    
+                    // Plan type indicator
+                    ZStack {
+                        Circle()
+                            .fill(.blue.opacity(0.1))
+                            .frame(width: 50, height: 50)
+                        
+                        Image(systemName: "list.bullet.rectangle.fill")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.blue)
+                    }
+                }
+                
+                // Plan type and stats
+                HStack(spacing: 12) {
+                    StatChip(
+                        value: plan.planType.rawValue,
+                        label: "סוג",
+                        icon: "tag.fill",
+                        color: .blue
+                    )
+                    
+                    StatChip(
+                        value: "\(plan.exercises.count)",
+                        label: "תרגילים",
+                        icon: "dumbbell",
+                        color: .green
+                    )
+                    
+                    if !plan.schedule.isEmpty {
+                        StatChip(
+                            value: "\(plan.schedule.count)",
+                            label: "ימים",
+                            icon: "calendar",
+                            color: .orange
+                        )
+                    }
+                    
+                    Spacer()
+                }
+            }
+            .padding(20)
+            .background(.white.opacity(0.5))
+            
+            // Schedule section (if exists)
+            if !plan.schedule.isEmpty {
+                Divider()
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("לוח זמנים")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    
+                    HStack(spacing: 8) {
+                        ForEach(plan.schedule.sorted(by: { $0.weekday < $1.weekday }), id: \.self) { day in
+                            DayChip(day: day, isSelected: false)
+                        }
+                        
+                        Spacer()
+                    }
+                }
+                .padding(20)
+            }
+        }
+        .background(Color(.tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+    }
+    
+    private var modernExercisesCard: some View {
+        VStack(spacing: 0) {
+            // Header with workout tabs
+            if !plan.planType.workoutLabels.isEmpty {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("תרגילי האימון")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                    
+                    // Modern segmented control
+                    modernWorkoutLabelPicker
+                    
+                    HStack {
+                        StatChip(
+                            value: "\(filteredExercises.count)",
+                            label: "תרגילים ב\(currentLabelTab)",
+                            icon: "dumbbell",
+                            color: .blue
+                        )
+                        
+                        Spacer()
+                    }
+                }
+                .padding(20)
+                .background(.white.opacity(0.5))
+                
+                Divider()
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("תרגילי האימון")
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                }
+                .padding(20)
+                .background(.white.opacity(0.5))
+                
+                Divider()
+            }
+            
+            // Exercises list
+            VStack(spacing: 12) {
+                if filteredExercises.isEmpty {
+                    VStack(spacing: 16) {
+                        Image(systemName: "dumbbell")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.secondary)
+                        
+                        Text("אין תרגילים")
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        
+                        Text("הוסף תרגילים מהכפתור למעלה")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding(.vertical, 32)
+                } else {
+                    ForEach(filteredExercises, id: \.id) { exercise in
+                        ModernExerciseRow(
+                            exercise: exercise,
+                            onEdit: {
+                                editingExercise = exercise
+                            }
+                        )
+                    }
+                    .onDelete(perform: deleteExercises)
+                }
+            }
+            .padding(20)
+        }
+        .background(Color(.tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+    }
+    
+    private var modernWorkoutLabelPicker: some View {
+        HStack(spacing: 0) {
+            ForEach(plan.planType.workoutLabels, id: \.self) { label in
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        currentLabelTab = label
+                    }
+                }) {
+                    Text(label)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(currentLabelTab == label ? .white : .primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(currentLabelTab == label ? .blue : .clear)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(4)
+        .background(Color(.secondarySystemGroupedBackground))
+        .cornerRadius(16)
+    }
+    
+    private func deleteExercises(offsets: IndexSet) {
+        let exercisesToDelete = filteredExercises.enumerated().compactMap { index, exercise in
+            offsets.contains(index) ? exercise : nil
+        }
+        
+        withAnimation {
+            for exercise in exercisesToDelete {
+                if let planIndex = plan.exercises.firstIndex(where: { $0.id == exercise.id }) {
+                    plan.exercises.remove(at: planIndex)
                 }
             }
         }
     }
     
-    private var exercisesSection: some View {
-        Section("תרגילים") {
-            if !plan.planType.workoutLabels.isEmpty {
-                workoutLabelPicker
-            }
-            
-            exercisesList
-            
-            addExerciseForm
+    private var filteredExercises: [Exercise] {
+        plan.exercises.filter { ex in
+            currentLabelTab.isEmpty ? true : ((ex.label ?? plan.planType.workoutLabels.first) == currentLabelTab)
         }
-    }
-    
-    private var workoutLabelPicker: some View {
-        Picker("אימון", selection: $currentLabelTab) {
-            ForEach(plan.planType.workoutLabels, id: \.self) { label in
-                Text(label).tag(label)
-            }
-        }
-        .pickerStyle(.segmented)
     }
     
     private var exercisesList: some View {
-        let displayedExercises = plan.exercises.filter { ex in
-            currentLabelTab.isEmpty ? true : ((ex.label ?? plan.planType.workoutLabels.first) == currentLabelTab)
-        }
-        
-        return ForEach(displayedExercises, id: \.id) { exercise in
-            ExerciseRowView(exercise: exercise)
+        ForEach(filteredExercises, id: \.id) { exercise in
+            ModernExerciseRow(
+                exercise: exercise,
+                onEdit: {
+                    editingExercise = exercise
+                }
+            )
         }
         .onDelete { offsets in
-            plan.exercises.remove(atOffsets: offsets)
+            let exercisesToDelete = filteredExercises.enumerated().compactMap { index, exercise in
+                offsets.contains(index) ? exercise : nil
+            }
+            for exercise in exercisesToDelete {
+                if let planIndex = plan.exercises.firstIndex(where: { $0.id == exercise.id }) {
+                    plan.exercises.remove(at: planIndex)
+                }
+            }
         }
     }
     
-    private var addExerciseForm: some View {
-        VStack(alignment: .leading) {
-            HStack {
-                TextField("שם התרגיל", text: $newExerciseName)
-                Button {
-                    activeSheet = .chooseLibrary
-                } label: { Label("בחר", systemImage: "text.magnifyingglass") }
-            }
-            if !currentLabelTab.isEmpty {
-                Button {
-                    activeSheet = .quickLibrary
-                } label: { Label("הוסף מתרגילים מוכרים ל-\(currentLabelTab)", systemImage: "plus.circle") }
-            }
+    private var bottomActionBar: some View {
+        VStack(spacing: AppTheme.s8) {
+            Divider()
             
-            Stepper("סטים: \(plannedSets)", value: $plannedSets, in: 1...10)
-            Stepper("חזרות: \(plannedReps)", value: $plannedReps, in: 1...20)
-            TextField("הערות", text: $notes)
-            Button("הוסף תרגיל") {
-                let ex = Exercise(name: newExerciseName, plannedSets: plannedSets, plannedReps: plannedReps, notes: notes.isEmpty ? nil : notes, label: currentLabelTab.isEmpty ? plan.planType.workoutLabels.first : currentLabelTab)
-                plan.exercises.append(ex)
-                newExerciseName = ""; plannedSets = 3; plannedReps = 8; notes = ""
+            HStack(spacing: AppTheme.s8) {
+                Button(action: {
+                    activeSheet = .chooseLibrary
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "text.magnifyingglass")
+                            .font(.caption)
+                        Text("בחר")
+                            .font(.subheadline)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity)
+                
+                if !currentLabelTab.isEmpty {
+                    Button(action: {
+                        activeSheet = .quickLibrary
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus.circle")
+                                .font(.caption)
+                            Text("הוסף מתרגילים מוכרים ל-\(currentLabelTab)")
+                                .font(.subheadline)
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .frame(maxWidth: .infinity)
+                }
             }
-            .disabled(newExerciseName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
         }
     }
 
@@ -240,24 +588,85 @@ struct PlanDetailView: View {
     }
 }
 
-struct ExerciseRowView: View {
+struct ModernExerciseRow: View {
     let exercise: Exercise
+    let onEdit: () -> Void
     
     var body: some View {
-        VStack(alignment: .leading) {
-            Text(exercise.name).font(.headline)
-            HStack {
-                Text("סטים: \(exercise.plannedSets)")
-                if let reps = exercise.plannedReps { Text("חזרות: \(reps)") }
-                if let lbl = exercise.label, !lbl.isEmpty { Text("(\(lbl))") }
+        HStack(alignment: .top, spacing: AppTheme.s12) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(exercise.name)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                
+                HStack(spacing: 8) {
+                    Text("סטים: \(exercise.plannedSets)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    
+                    if let reps = exercise.plannedReps {
+                        Text("·")
+                            .foregroundStyle(.secondary)
+                        Text("חזרות: \(reps)")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    if let lbl = exercise.label, !lbl.isEmpty {
+                        Text("(\(lbl))")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                
+                if let notes = exercise.notes, !notes.isEmpty {
+                    Text(notes)
+                        .font(.footnote)
+                        .foregroundStyle(.tertiary)
+                        .padding(.top, 2)
+                }
+                
+                HStack(spacing: 6) {
+                    if let mg = exercise.muscleGroup {
+                        PillBadge(text: mg)
+                    }
+                    if let eq = exercise.equipment {
+                        PillBadge(text: eq)
+                    }
+                    if exercise.isBodyweight ?? false {
+                        PillBadge(text: "משקל גוף", icon: "figure.strengthtraining.traditional")
+                    }
+                }
+                .padding(.top, 4)
             }
-            HStack(spacing: 6) {
-                if let mg = exercise.muscleGroup { Text(mg).font(.footnote).foregroundStyle(.secondary) }
-                if let eq = exercise.equipment { Text(eq).font(.footnote).foregroundStyle(.secondary) }
-                if exercise.isBodyweight ?? false { Text("משקל גוף").font(.footnote).foregroundStyle(.secondary) }
+            
+            Spacer()
+            
+            HStack(spacing: AppTheme.s8) {
+                Button(action: onEdit) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "pencil")
+                            .font(.caption)
+                        Text("ערוך")
+                            .font(.caption)
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+                
+                Menu {
+                    Button("מחיקה", role: .destructive) {
+                        // Delete functionality handled by onDelete in parent
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .font(.caption)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
             }
-            if let n = exercise.notes, !n.isEmpty { Text(n).font(.footnote).foregroundStyle(.secondary) }
         }
+        .padding(.vertical, AppTheme.s8)
     }
 }
 
@@ -504,3 +913,5 @@ struct PlanEditView: View {
         return symbols[index]
     }
 }
+
+

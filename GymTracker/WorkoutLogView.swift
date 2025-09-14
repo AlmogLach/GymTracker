@@ -21,49 +21,66 @@ struct WorkoutLogView: View {
     @State private var addedToastCount: Int = 0
     @State private var showAddedToast: Bool = false
 
-    private enum LogSheet: String, Identifiable { case chooseExercises; var id: String { rawValue } }
+    private enum LogSheet: String, Identifiable { 
+        case chooseExercises, choosePlan
+        var id: String { rawValue } 
+    }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: AppTheme.s16) {
-                    planSelectionCard
+                VStack(spacing: 16) {
+                    polishedPlanSelectionCard
                     
                     if selectedPlan == nil {
                         EmptyStateView(
                             iconSystemName: "dumbbell",
                             title: "בחר תוכנית כדי להתחיל לוג"
                         )
-                        .appCard()
+                        .padding(16)
+                        .background(Color(.tertiarySystemGroupedBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
                     } else if let plan = selectedPlan {
-                        exercisesCard(plan: plan)
-                        actionsCard(plan: plan)
+                        polishedExercisesCard(plan: plan)
                     }
                 }
-                .padding(.top, AppTheme.s16)
-                .padding(.bottom, 100) // Space for sticky footer
+                .padding(.top, 16)
+                .padding(.bottom, 120) // Space for sticky footer
             }
-            .background(AppTheme.screenBG)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("לוג אימון")
+            .navigationBarTitleDisplayMode(.large)
             .onChange(of: selectedPlan) { _, newValue in
                 Task { await loadLastDefaults(for: newValue) }
             }
             .onChange(of: selectedLabel) { _, _ in
                 Task { await loadLastDefaults(for: selectedPlan) }
             }
-            .sheet(item: $logActiveSheet) { _ in
-                ExercisePickerSheet(onAdd: { items in
-                    var added = 0
-                    for item in items {
-                        let name = item.name
-                        if !session.exerciseSessions.contains(where: { $0.exerciseName.caseInsensitiveCompare(name) == .orderedSame }) {
-                            session.exerciseSessions.append(ExerciseSession(exerciseName: name, setLogs: []))
-                            added += 1
+            .sheet(item: $logActiveSheet) { sheet in
+                switch sheet {
+                case .chooseExercises:
+                    ExercisePickerSheet(onAdd: { items in
+                        var added = 0
+                        for item in items {
+                            let name = item.name
+                            if !session.exerciseSessions.contains(where: { $0.exerciseName.caseInsensitiveCompare(name) == .orderedSame }) {
+                                session.exerciseSessions.append(ExerciseSession(exerciseName: name, setLogs: []))
+                                added += 1
+                            }
                         }
-                    }
-                    logActiveSheet = nil
-                    if added > 0 { addedToastCount = added; showAddedToast = true }
-                })
+                        logActiveSheet = nil
+                        if added > 0 { addedToastCount = added; showAddedToast = true }
+                    })
+                case .choosePlan:
+                    PlanSelectionSheet(
+                        plans: plans,
+                        selectedPlan: $selectedPlan,
+                        onDismiss: { 
+                            logActiveSheet = nil 
+                        }
+                    )
+                }
             }
             .alert("הוספה", isPresented: $showAddedToast) {
                 Button("סגור", role: .cancel) {}
@@ -71,21 +88,12 @@ struct WorkoutLogView: View {
                 Text("נוספו \(addedToastCount) תרגילים ללוג")
             }
             .safeAreaInset(edge: .bottom) {
-                PrimaryButton(title: "שמור אימון") {
-                    if let plan = selectedPlan {
-                        session.planName = plan.name
-                        session.workoutLabel = selectedLabel.isEmpty ? plan.planType.workoutLabels.first : selectedLabel
-                        modelContext.insert(session)
-                        session = WorkoutSession()
-                        lastDefaults = [:]
-                        selectedLabel = ""
-                    }
-                }
-                .disabled(session.exerciseSessions.isEmpty)
-                .padding(.horizontal, AppTheme.s16)
-                .padding(.bottom, AppTheme.s16)
-                .background(AppTheme.screenBG)
+                polishedStickyFooter
             }
+        }
+        .onTapGesture {
+            // Dismiss keyboard on tap outside
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
     }
 
@@ -225,43 +233,60 @@ struct WorkoutLogView: View {
         }
     }
     
-    private var planSelectionCard: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s8) {
+    private var polishedPlanSelectionCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
             Text("בחר תוכנית")
-                .font(.caption)
+                .font(.footnote)
+                .fontWeight(.medium)
                 .foregroundStyle(.secondary)
             
             Button(action: {
-                // TODO: Open plan selection sheet
+                logActiveSheet = .choosePlan
             }) {
-                HStack {
-                    if let plan = selectedPlan {
-                        VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .center, spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let plan = selectedPlan {
                             Text(plan.name)
-                                .font(.headline)
+                                .font(.title3)
+                                .fontWeight(.semibold)
                                 .foregroundStyle(.primary)
-                            Text(plan.planType.rawValue)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
+                            
+                            PillBadge(text: plan.planType.rawValue)
+                        } else {
+                            if plans.isEmpty {
+                                Text("אין תוכניות זמינות")
+                                    .font(.title3)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.secondary)
+                            } else {
+                                Text("בחר תוכנית")
+                                    .font(.title3)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(.secondary)
+                            }
                         }
-                    } else {
-                        Text("בחר תוכנית")
-                            .font(.headline)
-                            .foregroundStyle(.secondary)
                     }
+                    
                     Spacer()
+                    
                     Image(systemName: "chevron.down")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.tertiary)
                 }
             }
-            .frame(height: 56)
+            .frame(minHeight: 72)
         }
-        .appCard()
+        .padding(16)
+        .background(Color(.tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .contentShape(RoundedRectangle(cornerRadius: 16))
     }
     
-    private func exercisesCard(plan: WorkoutPlan) -> some View {
-        VStack(alignment: .leading, spacing: AppTheme.s8) {
+    private func polishedExercisesCard(plan: WorkoutPlan) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            // Full-width segmented control with padding
             if !plan.planType.workoutLabels.isEmpty {
                 Picker("אימון", selection: $selectedLabel) {
                     ForEach(plan.planType.workoutLabels, id: \.self) { label in
@@ -269,242 +294,232 @@ struct WorkoutLogView: View {
                     }
                 }
                 .pickerStyle(.segmented)
-                .padding(8)
+                .padding(.horizontal, 8)
                 
+                // Info/actions row
                 HStack {
-                    PillBadge(text: "\(plan.exercises.count) תרגילים", icon: "dumbbell")
+                    PillBadge(text: "\(filteredExercises(for: plan).count) תרגילים", icon: "dumbbell")
+                    
                     Spacer()
-                    Button("הצג הכל") {
+                    
+                    ActionChip(title: "הצג הכל") {
                         showAllLabels.toggle()
+                        hapticFeedback(.light)
                     }
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.accent)
                 }
+                .padding(.horizontal, 16)
+                
+                Divider()
+                    .padding(.vertical, 4)
             }
             
-            let exercises = plan.exercises.filter { ex in
-                showAllLabels || selectedLabel.isEmpty ? true : ((ex.label ?? plan.planType.workoutLabels.first) == selectedLabel)
-            }
+            // Exercises using new ExerciseCard components
+            let exercises = filteredExercises(for: plan)
+            let _ = print("DEBUG: Filtered exercises count: \(exercises.count) for plan: \(plan.name)")
+            let _ = print("DEBUG: Plan has \(plan.exercises.count) total exercises")
+            let _ = print("DEBUG: Selected label: '\(selectedLabel)', showAllLabels: \(showAllLabels)")
             
             if exercises.isEmpty {
-                Text("אין תרגילים בתוכנית זו")
-                    .foregroundStyle(.secondary)
-                    .italic()
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, AppTheme.s16)
+                EmptyStateView(
+                    iconSystemName: "dumbbell",
+                    title: "אין תרגילים בתוכנית זו",
+                    message: "הוסף תרגילים מהספרייה או צור חדשים"
+                )
+                .padding(.vertical, 16)
             } else {
-                ForEach(exercises, id: \.id) { exercise in
-                    ExerciseLogRow(
-                        exerciseName: exercise.name,
-                        session: $session,
-                        defaultReps: lastDefaults[exercise.name]?.reps,
-                        defaultWeight: lastDefaults[exercise.name]?.weight,
-                        defaultRPE: lastDefaults[exercise.name]?.rpe
-                    )
+                VStack(spacing: 8) {
+                    ForEach(exercises, id: \.id) { exercise in
+                        let _ = print("DEBUG: Rendering exercise: \(exercise.name)")
+                        ExerciseCard(
+                            exercise: exercise,
+                            session: $session,
+                            lastDefaults: lastDefaults[exercise.name],
+                            weightUnit: appSettings.weightUnit,
+                            weightStep: appSettings.weightUnit == .kg ? appSettings.weightIncrementKg : appSettings.weightIncrementLb,
+                            onAddSet: {
+                                addNewSet(for: exercise)
+                            }
+                        )
+                    }
                 }
+                .padding(.horizontal, 16)
             }
+            
+            // Bottom actions
+            Divider()
+                .padding(.vertical, 8)
+            
+            HStack(spacing: 8) {
+                Button("בחר תרגילים") {
+                    logActiveSheet = .chooseExercises
+                }
+                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity)
+                
+                Button("אוטופיל מהאימון האחרון") {
+                    if let plan = selectedPlan {
+                        Task { await smartAutofill(plan: plan) }
+                    }
+                    hapticFeedback(.medium)
+                }
+                .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal, 16)
         }
-        .appCard()
+        .padding(.vertical, 16)
+        .background(Color(.tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
     }
     
-    private func actionsCard(plan: WorkoutPlan) -> some View {
-        HStack(spacing: AppTheme.s8) {
-            Button("בחר תרגילים") { logActiveSheet = .chooseExercises }
-                .buttonStyle(.bordered)
-                .frame(maxWidth: .infinity)
-            
-            Button("אוטופיל מהאימון האחרון") { Task { await smartAutofill(plan: plan) } }
-                .buttonStyle(.bordered)
-                .frame(maxWidth: .infinity)
+    private func addNewSet(for exercise: Exercise) {
+        print("DEBUG: Adding set for exercise: \(exercise.name)")
+        
+        // Ensure exercise session exists
+        if !session.exerciseSessions.contains(where: { $0.exerciseName == exercise.name }) {
+            let newExerciseSession = ExerciseSession(exerciseName: exercise.name, setLogs: [])
+            session.exerciseSessions.append(newExerciseSession)
+            print("DEBUG: Created new exercise session for \(exercise.name)")
         }
-        .appCard()
+        
+        guard let exerciseIdx = session.exerciseSessions.firstIndex(where: { $0.exerciseName == exercise.name }) else { 
+            print("DEBUG: Failed to find exercise index for \(exercise.name)")
+            return 
+        }
+        
+        let newSet = SetLog(
+            reps: lastDefaults[exercise.name]?.reps ?? exercise.plannedReps ?? 8,
+            weight: lastDefaults[exercise.name]?.weight ?? 0,
+            rpe: lastDefaults[exercise.name]?.rpe,
+            restSeconds: 120,
+            isWarmup: false
+        )
+        
+        session.exerciseSessions[exerciseIdx].setLogs.append(newSet)
+        print("DEBUG: Added set to \(exercise.name), now has \(session.exerciseSessions[exerciseIdx].setLogs.count) sets")
+        hapticFeedback(.medium)
+    }
+    
+    private func filteredExercises(for plan: WorkoutPlan) -> [Exercise] {
+        plan.exercises.filter { ex in
+            showAllLabels || selectedLabel.isEmpty ? true : ((ex.label ?? plan.planType.workoutLabels.first) == selectedLabel)
+        }
+    }
+    
+    private var polishedStickyFooter: some View {
+        VStack(spacing: 8) {
+            // Status bar
+            HStack {
+                Text("\(totalValidSets) סטים")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                
+                Text("·")
+                    .foregroundStyle(.tertiary)
+                
+                Text("\(totalWorkoutVolume, specifier: "%.0f") \(appSettings.weightUnit.symbol)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                
+                if let plan = selectedPlan {
+                    Text("·")
+                        .foregroundStyle(.tertiary)
+                    
+                    Text(selectedLabel.isEmpty ? plan.name : selectedLabel)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            
+            // Save button
+            Button("שמור אימון") {
+                if let plan = selectedPlan {
+                    session.planName = plan.name
+                    session.workoutLabel = selectedLabel.isEmpty ? plan.planType.workoutLabels.first : selectedLabel
+                    session.isCompleted = true
+                    session.notes = ""
+                    modelContext.insert(session)
+                    session = WorkoutSession()
+                    lastDefaults = [:]
+                    selectedLabel = ""
+                    hapticFeedback(.success)
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .frame(maxWidth: .infinity)
+            .disabled(totalValidSets == 0)
+            .padding(.horizontal, 16)
+        }
+        .padding(.vertical, 12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal, 16)
+        .shadow(color: .black.opacity(0.1), radius: 4, x: 0, y: -2)
+    }
+    
+    private var totalWorkoutVolume: Double {
+        session.exerciseSessions.flatMap { $0.setLogs }.reduce(0.0) { total, set in
+            total + (Double(set.reps) * set.weight)
+        }
+    }
+    
+    private var totalValidSets: Int {
+        session.exerciseSessions.flatMap { $0.setLogs }.filter { $0.reps > 0 && $0.weight >= 0 }.count
+    }
+    
+    private func hapticFeedback(_ style: UINotificationFeedbackGenerator.FeedbackType) {
+        let generator = UINotificationFeedbackGenerator()
+        generator.notificationOccurred(style)
+    }
+    
+    private func hapticFeedback(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
+        let impact = UIImpactFeedbackGenerator(style: style)
+        impact.impactOccurred()
     }
 }
 
-struct ExerciseLogRow: View {
-    let exerciseName: String
-    @Binding var session: WorkoutSession
-    @Query private var settingsList: [AppSettings]
-    var defaultReps: Int?
-    var defaultWeight: Double?
-    var defaultRPE: Double?
-    @State private var reps: String = ""
-    @State private var weight: String = ""
-    @State private var rpe: String = ""
-
-    var body: some View {
-        VStack(alignment: .leading) {
-            exerciseHeader
-            exerciseInputRow
-            
-            if let idx = session.exerciseSessions.firstIndex(where: { $0.exerciseName == exerciseName }) {
-                setsList(for: idx)
-            }
-        }
-        .onAppear {
-            if let d = defaultReps, reps.isEmpty { reps = String(d) }
-            if let d = defaultWeight, weight.isEmpty { weight = String(displayWeight(d)) }
-            if let d = defaultRPE, rpe.isEmpty { rpe = String(format: "%.1f", d) }
-        }
-    }
-    
-    private var exerciseHeader: some View {
-        Text(exerciseName).font(.headline)
-    }
-    
-    private var exerciseInputRow: some View {
-        HStack(spacing: 8) {
-            TextField("חזרות", text: $reps).keyboardType(.numberPad)
-                .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 70)
-            TextField("משקל (\(unit.symbol))", text: $weight).keyboardType(.decimalPad)
-                .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 120)
-            TextField("RPE", text: $rpe).keyboardType(.decimalPad)
-                .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 80)
-            Button {
-                addSet()
-            } label: { Label("הוסף", systemImage: "plus.circle.fill") }
-            .disabled(Int(reps) == nil || Double(weight) == nil)
-        }
-        .padding(.bottom, 4)
-    }
-    
-    private func setsList(for exerciseIdx: Int) -> some View {
-        let sets = session.exerciseSessions[exerciseIdx].setLogs
-        if sets.isEmpty {
-            return AnyView(EmptyView())
-        }
-        
-        return AnyView(
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(Array(sets.enumerated()), id: \.offset) { entry in
-                    SetRowView(
-                        setIndex: entry.offset,
-                        exerciseIdx: exerciseIdx,
-                        session: $session,
-                        unit: unit,
-                        displayWeight: displayWeight,
-                        weightStep: weightStep,
-                        adjustWeight: adjustWeight
-                    )
-                }
-                HStack(spacing: 12) {
-                    Button { duplicateLastSet(at: exerciseIdx) } label: { Label("שכפל אחרון", systemImage: "doc.on.doc") }
-                    Button(role: .destructive) { clearAllSets(at: exerciseIdx) } label: { Label("נקה הכל", systemImage: "trash") }
-                }
-                .padding(.top, 4)
-            }
-        )
-    }
-
-    private func addSet() {
-        let newSet = SetLog(reps: Int(reps) ?? 0, weight: inputWeightKg(), rpe: Double(rpe))
-        if let idx = session.exerciseSessions.firstIndex(where: { $0.exerciseName == exerciseName }) {
-            session.exerciseSessions[idx].setLogs.append(newSet)
-        } else {
-            let exSession = ExerciseSession(exerciseName: exerciseName, setLogs: [newSet])
-            session.exerciseSessions.append(exSession)
-        }
-        reps = ""; weight = ""; rpe = ""
-    }
-
-    private var unit: AppSettings.WeightUnit { settingsList.first?.weightUnit ?? .kg }
-    private func displayWeight(_ kg: Double) -> Double { unit.toDisplay(fromKg: kg) }
-    private func inputWeightKg() -> Double { unit.toKg(fromDisplay: Double(weight) ?? 0) }
-    private var weightStep: Double { unit == .kg ? 2.5 : 5.0 }
-
-    private func duplicateLastSet(at exerciseIdx: Int) {
-        guard let last = session.exerciseSessions[exerciseIdx].setLogs.last else { return }
-        session.exerciseSessions[exerciseIdx].setLogs.append(SetLog(reps: last.reps, weight: last.weight, rpe: last.rpe, notes: last.notes, restSeconds: last.restSeconds, isWarmup: last.isWarmup))
-    }
-
-    private func clearAllSets(at exerciseIdx: Int) {
-        session.exerciseSessions[exerciseIdx].setLogs.removeAll()
-    }
-
-    private func adjustWeight(_ exerciseIdx: Int, _ setIndex: Int, delta: Double) {
-        let unit = self.unit
-        let currentKg = session.exerciseSessions[exerciseIdx].setLogs[setIndex].weight
-        let newDisplay = unit.toDisplay(fromKg: currentKg) + delta
-        let newKg = unit.toKg(fromDisplay: newDisplay)
-        session.exerciseSessions[exerciseIdx].setLogs[setIndex].weight = max(0, newKg)
-    }
-}
-
-struct SetRowView: View {
-    let setIndex: Int
-    let exerciseIdx: Int
-    @Binding var session: WorkoutSession
-    let unit: AppSettings.WeightUnit
-    let displayWeight: (Double) -> Double
-    let weightStep: Double
-    let adjustWeight: (Int, Int, Double) -> Void
+struct PlanSelectionSheet: View {
+    let plans: [WorkoutPlan]
+    @Binding var selectedPlan: WorkoutPlan?
+    let onDismiss: () -> Void
     
     var body: some View {
-        HStack(spacing: 10) {
-            Text("סט \(setIndex + 1)")
-                .frame(width: 44, alignment: .leading)
-            
-            repsStepper
-            
-            weightControls
-            
-            rpeStepper
-            
-            warmupToggle
-            
-            deleteButton
+        NavigationStack {
+            List {
+                ForEach(plans.sorted(by: { $0.name < $1.name })) { plan in
+                    Button(action: {
+                        selectedPlan = plan
+                        onDismiss()
+                    }) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(plan.name)
+                                    .font(.headline)
+                                    .foregroundStyle(.primary)
+                                Text(plan.planType.rawValue)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if selectedPlan?.id == plan.id {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(.blue)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("בחר תוכנית")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("ביטול") { onDismiss() }
+                }
+            }
         }
-    }
-    
-    private var repsStepper: some View {
-        let repsBinding = Binding<Int>(
-            get: { session.exerciseSessions[exerciseIdx].setLogs[setIndex].reps },
-            set: { session.exerciseSessions[exerciseIdx].setLogs[setIndex].reps = $0 }
-        )
-        
-        return Stepper(value: repsBinding, in: 1...100) {
-            Text("חזרות: \(session.exerciseSessions[exerciseIdx].setLogs[setIndex].reps)")
-        }
-        .frame(maxWidth: 170, alignment: .leading)
-    }
-    
-    private var weightControls: some View {
-        let displayW = Int(displayWeight(session.exerciseSessions[exerciseIdx].setLogs[setIndex].weight))
-        
-        return HStack(spacing: 6) {
-            Text("משקל: \(displayW) \(unit.symbol)")
-            Button { adjustWeight(exerciseIdx, setIndex, -weightStep) } label: { Image(systemName: "minus.circle") }
-            Button { adjustWeight(exerciseIdx, setIndex, weightStep) } label: { Image(systemName: "plus.circle") }
-        }
-        .frame(maxWidth: 220, alignment: .leading)
-    }
-    
-    private var rpeStepper: some View {
-        let rpeHalfSteps = Binding<Int>(
-            get: { Int(((session.exerciseSessions[exerciseIdx].setLogs[setIndex].rpe ?? 0) * 2).rounded()) },
-            set: { session.exerciseSessions[exerciseIdx].setLogs[setIndex].rpe = Double($0) / 2.0 }
-        )
-        
-        return Stepper(value: rpeHalfSteps, in: 0...20) {
-            Text("RPE: \(String(format: "%.1f", session.exerciseSessions[exerciseIdx].setLogs[setIndex].rpe ?? 0))")
-        }
-    }
-    
-    private var warmupToggle: some View {
-        Toggle("חימום", isOn: Binding(
-            get: { session.exerciseSessions[exerciseIdx].setLogs[setIndex].isWarmup ?? false },
-            set: { session.exerciseSessions[exerciseIdx].setLogs[setIndex].isWarmup = $0 }
-        ))
-        .toggleStyle(.switch)
-        .frame(maxWidth: 100)
-    }
-    
-    private var deleteButton: some View {
-        Button(role: .destructive) {
-            session.exerciseSessions[exerciseIdx].setLogs.remove(at: setIndex)
-        } label: { Image(systemName: "trash") }
     }
 }
