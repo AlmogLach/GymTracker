@@ -523,3 +523,8 @@ struct PlanSelectionSheet: View {
         }
     }
 }
+
+#Preview {
+    WorkoutLogView()
+        .modelContainer(for: [WorkoutPlan.self, Exercise.self, WorkoutSession.self, ExerciseSession.self, SetLog.self, AppSettings.self], inMemory: true)
+}
