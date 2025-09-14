@@ -330,15 +330,14 @@ struct DashboardView: View {
         }
         
         // For AB/ABC plans, find the last completed workout label and get the next one
-        let planSessions = sessions.filter { $0.planName == plan.name }
+        let planSessions = sessions.filter { $0.planName == plan.name && $0.isCompleted == true }
         
-        // If no sessions yet, start with the first workout
+        // If no completed sessions yet, start with the first workout
         guard let lastSession = planSessions.first else {
             return plan.planType.workoutLabels.first ?? ""
         }
         
         // Get the label from the last completed session
-        // Extract the workout label from exercises in the session
         let lastWorkoutLabel = getWorkoutLabelFromSession(lastSession, plan: plan)
         
         // Find the next workout in the cycle

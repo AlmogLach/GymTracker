@@ -29,6 +29,7 @@ struct ActiveWorkoutView: View {
     @State private var currentReps: Int = 0
     
     @Query private var settingsList: [AppSettings]
+    @Query(sort: [SortDescriptor(\WorkoutSession.date, order: .reverse)]) private var sessions: [WorkoutSession]
     private var settings: AppSettings { settingsList.first ?? AppSettings() }
     
     var body: some View {
@@ -708,11 +709,51 @@ struct ActiveWorkoutView: View {
     }
     
     private func logSet(for exercise: Exercise) {
+        guard let session = currentSession else { 
+            print("❌ No current session when trying to log set")
+            return 
+        }
+        
+        // Validate that we have valid values
+        guard currentReps > 0 else {
+            print("❌ Invalid reps: \(currentReps)")
+            return
+        }
+        
+        print("✅ Logging set for \(exercise.name): \(currentWeight)kg x \(currentReps) reps")
+        
+        // Find or create ExerciseSession for this exercise
+        var exerciseSession = session.exerciseSessions.first { $0.exerciseName == exercise.name }
+        
+        if exerciseSession == nil {
+            exerciseSession = ExerciseSession(exerciseName: exercise.name, setLogs: [])
+            session.exerciseSessions.append(exerciseSession!)
+            print("✅ Created new ExerciseSession for \(exercise.name)")
+        }
+        
+        // Create and add SetLog
+        let setLog = SetLog(
+            reps: currentReps,
+            weight: currentWeight,
+            rpe: nil,
+            notes: nil,
+            restSeconds: settings.defaultRestSeconds,
+            isWarmup: false
+        )
+        
+        exerciseSession!.setLogs.append(setLog)
+        print("✅ Added set log. Total sets for \(exercise.name): \(exerciseSession!.setLogs.count)")
+        
+        // Save to context
+        do {
+            try modelContext.save()
+            print("✅ Successfully saved to context")
+        } catch {
+            print("❌ Failed to save: \(error)")
+        }
+        
         // Add rest timer after logging a set
         startRestTimer()
-        
-        // TODO: Implement actual set logging to WorkoutSession
-        // This would create ExerciseSession and SetLog entries
     }
     
     private func nextExercise() {
@@ -739,7 +780,24 @@ struct ActiveWorkoutView: View {
         
         // Initialize with planned values or defaults
         currentReps = exercise.plannedReps ?? 8
-        currentWeight = 0.0 // Start with 0, user will adjust
+        
+        // Try to get the last weight used for this exercise, or use a sensible default
+        let lastWeight = getLastWeightForExercise(exercise.name)
+        currentWeight = lastWeight > 0 ? lastWeight : (exercise.isBodyweight == true ? 0.0 : 20.0)
+    }
+    
+    private func getLastWeightForExercise(_ exerciseName: String) -> Double {
+        // Look through recent sessions to find the last weight used for this exercise
+        for session in sessions {
+            for exerciseSession in session.exerciseSessions {
+                if exerciseSession.exerciseName == exerciseName {
+                    if let lastSet = exerciseSession.setLogs.last {
+                        return lastSet.weight
+                    }
+                }
+            }
+        }
+        return 0.0
     }
     
     private func startRestTimer() {
