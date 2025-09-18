@@ -1611,6 +1611,7 @@ struct WorkoutSessionEditSheet: View {
     let session: WorkoutSession
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Query private var plans: [WorkoutPlan]
     
     @State private var workoutLabel: String
     @State private var notes: String
@@ -1636,22 +1637,28 @@ struct WorkoutSessionEditSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: AppTheme.s24) {
-                    // Header
-                    VStack(spacing: AppTheme.s16) {
+                    // Header (modern card)
+                    VStack(spacing: AppTheme.s12) {
+                        ZStack {
+                            Circle()
+                                .fill(AppTheme.accent.opacity(0.1))
+                                .frame(width: 80, height: 80)
+                            Text(currentWorkoutLabel)
+                                .font(.system(size: 32, weight: .bold))
+                                .foregroundStyle(AppTheme.accent)
+                        }
                         Text("עריכת אימון")
-                            .font(.title)
-                            .fontWeight(.bold)
-                        
-                        Text(session.workoutLabel ?? session.planName ?? "אימון ללא שם")
-                                    .font(.subheadline)
-                            .foregroundStyle(AppTheme.secondary)
-                        
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
                         Text(session.date, style: .date)
                             .font(.caption)
                             .foregroundStyle(AppTheme.secondary)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(AppTheme.s24)
+                    .background(AppTheme.cardBG)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     
-                    // Workout details
+                    // Workout details (card)
                     VStack(alignment: .leading, spacing: AppTheme.s16) {
                         Text("פרטי האימון")
                             .font(.headline)
@@ -1665,11 +1672,29 @@ struct WorkoutSessionEditSheet: View {
                                     .fontWeight(.medium)
                                     .foregroundStyle(AppTheme.primary)
                                 
-                                TextField("A", text: $workoutLabel)
-                                    .textFieldStyle(.roundedBorder)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .multilineTextAlignment(.center)
+                                if allowedLabels.count > 1 {
+                                    HStack(spacing: AppTheme.s8) {
+                                        ForEach(allowedLabels, id: \.self) { label in
+                                            Button(action: { workoutLabel = label }) {
+                                                Text(label)
+                                                    .font(.subheadline)
+                                                    .fontWeight(.semibold)
+                                                    .padding(.vertical, AppTheme.s8)
+                                                    .padding(.horizontal, AppTheme.s12)
+                                                    .background(workoutLabel == label ? AppTheme.accent.opacity(0.2) : AppTheme.cardBG)
+                                                    .foregroundStyle(workoutLabel == label ? AppTheme.accent : .primary)
+                                                    .clipShape(Capsule())
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                } else {
+                                    TextField("A", text: $workoutLabel)
+                                        .textFieldStyle(.roundedBorder)
+                                        .font(.title2)
+                                        .fontWeight(.bold)
+                                        .multilineTextAlignment(.center)
+                                }
                             }
                             
                             // Duration
@@ -1679,7 +1704,7 @@ struct WorkoutSessionEditSheet: View {
                                     .fontWeight(.medium)
                                     .foregroundStyle(AppTheme.primary)
                                 
-                                HStack(spacing: AppTheme.s8) {
+                                HStack(spacing: AppTheme.s16) {
                                     VStack {
                                         Text("דקות")
                                             .font(.caption)
@@ -1692,7 +1717,7 @@ struct WorkoutSessionEditSheet: View {
                                     }
                                     
                                     Text(":")
-                                        .font(.title)
+                                        .font(.title2)
                                         .fontWeight(.bold)
                                     
                                     VStack {
@@ -1701,8 +1726,8 @@ struct WorkoutSessionEditSheet: View {
                                             .foregroundStyle(AppTheme.secondary)
                                         Stepper(value: $durationSeconds, in: 0...59) {
                                             Text("\(durationSeconds)")
-                                .font(.headline)
-                                .fontWeight(.bold)
+                                                .font(.headline)
+                                                .fontWeight(.bold)
                                         }
                                     }
                                 }
@@ -1727,11 +1752,16 @@ struct WorkoutSessionEditSheet: View {
                                     .foregroundStyle(AppTheme.primary)
                                 
                                 TextField("הוסף הערות לאימון...", text: $notes, axis: .vertical)
-                                    .textFieldStyle(.roundedBorder)
                                     .lineLimit(3...6)
+                                    .padding(AppTheme.s12)
+                                    .background(AppTheme.cardBG)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
                         }
                     }
+                    .padding(20)
+                    .background(AppTheme.cardBG)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     
                     // Exercises section
                     VStack(alignment: .leading, spacing: AppTheme.s16) {
@@ -1822,13 +1852,12 @@ struct WorkoutSessionEditSheet: View {
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("שמור") {
-                        saveChanges()
-                    }
+                    Button("שמור") { saveChanges() }
                     .buttonStyle(.borderedProminent)
                 }
             }
         }
+        .background(AppTheme.screenBG)
         .alert("מחק אימון", isPresented: $showDeleteConfirmation) {
             Button("מחק", role: .destructive) {
                 deleteSession()
@@ -1842,6 +1871,18 @@ struct WorkoutSessionEditSheet: View {
                 ExerciseDetailsSheet(exerciseSession: exercise)
             }
         }
+    }
+
+    private var allowedLabels: [String] {
+        if let planName = session.planName,
+           let plan = plans.first(where: { $0.name == planName }) {
+            return plan.planType.workoutLabels
+        }
+        return ["A"]
+    }
+
+    private var currentWorkoutLabel: String {
+        workoutLabel.isEmpty ? (allowedLabels.first ?? "A") : workoutLabel
     }
     
     private var totalSets: Int {
@@ -2220,8 +2261,8 @@ struct ExerciseSummaryCard: View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: AppTheme.s8) {
                 HStack {
-                    Text(exerciseSession.exerciseName)
-                        .font(.subheadline)
+            Text(exerciseSession.exerciseName)
+                .font(.subheadline)
                         .fontWeight(.medium)
                         .foregroundStyle(AppTheme.primary)
                         .lineLimit(1)
@@ -2312,10 +2353,10 @@ struct ExerciseDetailsSheet: View {
                 .font(.headline)
                 .fontWeight(.bold)
             
-            LazyVGrid(columns: [
+                LazyVGrid(columns: [
                 GridItem(.flexible()),
                 GridItem(.flexible()),
-                GridItem(.flexible())
+                    GridItem(.flexible())
             ], spacing: AppTheme.s12) {
                 StatCard(
                     title: "סטים",

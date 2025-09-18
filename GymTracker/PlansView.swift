@@ -354,7 +354,7 @@ struct PlanCard: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                     .foregroundStyle(AppTheme.secondary)
-
+                    
                     Spacer()
                     
                 Text("\(plan.exercises.count)")
