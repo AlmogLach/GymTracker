@@ -20,7 +20,10 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
+                    // Welcome header
+                    welcomeHeader
+                    
                     // Header stats row
                     statsOverviewCard
                     
@@ -36,7 +39,7 @@ struct DashboardView: View {
                     // Quick actions
                     quickActionsCard
                 }
-                .padding(.top, 16)
+                .padding(.top, 8)
                 .padding(.bottom, 24)
                 .padding(.horizontal, 16)
             }
@@ -57,12 +60,65 @@ struct DashboardView: View {
         }
     }
     
-    private var headerView: some View {
-        Text("לוח")
-            .font(.largeTitle)
-            .fontWeight(.bold)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, AppTheme.s16)
+    private var welcomeHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(greetingText)
+                        .font(.title2)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.primary)
+                    
+                    Text(currentDateText)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+                
+                // App logo
+                if let _ = UIImage(named: "AppIcon") {
+                    Image("AppIcon")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 44, height: 44)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .shadow(color: .black.opacity(0.1), radius: 2, x: 0, y: 1)
+                } else {
+                    // Fallback to SF Symbol if app icon doesn't exist
+                    Image(systemName: "figure.strengthtraining.traditional")
+                        .font(.system(size: 28))
+                        .foregroundStyle(AppTheme.accent)
+                        .frame(width: 44, height: 44)
+                        .background(
+                            Circle()
+                                .fill(AppTheme.accent.opacity(0.1))
+                        )
+                }
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+    
+    private var greetingText: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 5..<12:
+            return "בוקר טוב! 🌅"
+        case 12..<17:
+            return "צהריים טובים! ☀️"
+        case 17..<21:
+            return "אחר הצהריים טובים! 🌆"
+        default:
+            return "ערב טוב! 🌙"
+        }
+    }
+    
+    private var currentDateText: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .full
+        formatter.locale = Locale(identifier: "he")
+        return formatter.string(from: Date())
     }
     
     // Header stats overview
@@ -135,10 +191,7 @@ struct DashboardView: View {
                     if let todaysWorkout = getTodaysCompletedWorkout() {
                         VStack(spacing: 8) {
                             HStack {
-                                PillBadge(text: todaysWorkout.planName ?? "אימון", icon: "list.bullet.rectangle")
-                                if let label = todaysWorkout.workoutLabel {
-                                    PillBadge(text: "אימון \(label)", icon: "dumbbell")
-                                }
+                                PillBadge(text: todaysWorkout.workoutLabel ?? todaysWorkout.planName ?? "אימון", icon: "dumbbell")
                                 
                                 Spacer()
                             }
@@ -221,22 +274,77 @@ struct DashboardView: View {
     }
     
     private var lastWorkoutCard: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s8) {
-            Text("האימון האחרון")
-                .font(.headline)
-                .fontWeight(.bold)
+        VStack(alignment: .leading, spacing: AppTheme.s16) {
+            HStack {
+                Text("האימון האחרון")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                
+                Spacer()
+                
+                Button("הצג הכל") {
+                    onNavigateToHistory()
+                }
+                .font(.caption)
+                .foregroundStyle(AppTheme.accent)
+            }
             
             if let lastSession = sessions.first {
-                VStack(alignment: .leading, spacing: AppTheme.s8) {
-                    Text(lastSession.planName ?? "ללא תוכנית")
-                        .font(.title2)
-                        .fontWeight(.semibold)
+                VStack(alignment: .leading, spacing: AppTheme.s12) {
+                    // Workout header
+                    HStack {
+                        VStack(alignment: .leading, spacing: AppTheme.s4) {
+                            Text(lastSession.workoutLabel ?? lastSession.planName ?? "אימון ללא שם")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundStyle(AppTheme.primary)
+                            
+                            Text(lastSession.date, style: .date)
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondary)
+                        }
+                        
+                        Spacer()
+                        
+                        // Status indicator
+                        Circle()
+                            .fill(lastSession.isCompleted == true ? AppTheme.success : AppTheme.warning)
+                            .frame(width: 12, height: 12)
+                    }
                     
-                    Text(lastSession.date, style: .date)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    // Workout stats
+                    HStack(spacing: AppTheme.s16) {
+                        StatItem(
+                            icon: "dumbbell.fill",
+                            value: "\(lastSession.exerciseSessions.count)",
+                            label: "תרגילים"
+                        )
+                        
+                        StatItem(
+                            icon: "list.number",
+                            value: "\(totalSets(for: lastSession))",
+                            label: "סטים"
+                        )
+                        
+                        StatItem(
+                            icon: "chart.bar.fill",
+                            value: "\(Int(displayVolume(for: lastSession))) \(unit.symbol)",
+                            label: "נפח"
+                        )
+                    }
                     
-                    PillBadge(text: "\(Int(displayVolume(for: lastSession))) \(unit.symbol)", icon: "chart.bar")
+                    // Duration if available
+                    if let duration = lastSession.durationSeconds, duration > 0 {
+                        HStack {
+                            Image(systemName: "clock.fill")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.info)
+                            
+                            Text("זמן: \(duration / 60) דק׳")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.secondary)
+                        }
+                    }
                 }
             } else {
                 EmptyStateView(
@@ -253,6 +361,10 @@ struct DashboardView: View {
     }
 
     private var unit: AppSettings.WeightUnit { settingsList.first?.weightUnit ?? .kg }
+    
+    private func totalSets(for session: WorkoutSession) -> Int {
+        session.exerciseSessions.reduce(0) { $0 + $1.setLogs.count }
+    }
     
     private var thisWeekSessions: Int {
         let calendar = Calendar.current
@@ -350,18 +462,20 @@ struct DashboardView: View {
     }
     
     private func getWorkoutLabelFromSession(_ session: WorkoutSession, plan: WorkoutPlan) -> String {
-        // Try to get the workout label from the exercises in the session
-        // Look at the first exercise's name and find it in the plan to get its label
-        if let firstExerciseName = session.exerciseSessions.first?.exerciseName {
-            // Find the exercise in the plan that matches this name
-            if let exercise = plan.exercises.first(where: { $0.name == firstExerciseName }),
-               let label = exercise.label,
-               plan.planType.workoutLabels.contains(label) {
-                return label
-            }
+        // Prefer the explicit workout label stored on the session
+        if let label = session.workoutLabel, plan.planType.workoutLabels.contains(label) {
+            return label
         }
-        
-        // Fallback: use the first workout label
+
+        // Fallback: infer from the first exercise recorded in the session
+        if let firstExerciseName = session.exerciseSessions.first?.exerciseName,
+           let exercise = plan.exercises.first(where: { $0.name == firstExerciseName }),
+           let inferred = exercise.label,
+           plan.planType.workoutLabels.contains(inferred) {
+            return inferred
+        }
+
+        // Final fallback: first label for the plan type
         return plan.planType.workoutLabels.first ?? ""
     }
     
@@ -562,4 +676,9 @@ struct QuickActionTile: View {
     }
 }
 
+
+#Preview {
+    DashboardView(onNavigateToHistory: {})
+        .modelContainer(for: [WorkoutPlan.self, Exercise.self, WorkoutSession.self, ExerciseSession.self, SetLog.self, AppSettings.self], inMemory: true)
+}
 

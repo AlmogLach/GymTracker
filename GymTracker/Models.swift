@@ -14,6 +14,7 @@ final class WorkoutPlan {
     @Relationship(deleteRule: .cascade) var exercises: [Exercise]
     var planTypeRaw: String
     var schedule: [PlannedDay]
+    var id: UUID?
 
     var planType: PlanType {
         get { PlanType(rawValue: planTypeRaw) ?? .fullBody }
@@ -25,6 +26,7 @@ final class WorkoutPlan {
         self.exercises = exercises
         self.planTypeRaw = planType.rawValue
         self.schedule = schedule
+        self.id = UUID()
     }
 }
 
@@ -49,6 +51,7 @@ struct PlannedDay: Codable, Hashable {
 
 @Model
 final class Exercise {
+    var id: UUID?
     var name: String
     var plannedSets: Int
     var plannedReps: Int?
@@ -58,8 +61,11 @@ final class Exercise {
     var equipment: String?
     var isBodyweight: Bool?
     var isFavorite: Bool?
+    var workoutDay: String?
+    var workoutPlan: WorkoutPlan?
 
-    init(name: String, plannedSets: Int, plannedReps: Int? = nil, notes: String? = nil, label: String? = nil, muscleGroup: String? = nil, equipment: String? = nil, isBodyweight: Bool? = nil, isFavorite: Bool? = nil) {
+    init(name: String, plannedSets: Int, plannedReps: Int? = nil, notes: String? = nil, label: String? = nil, muscleGroup: String? = nil, equipment: String? = nil, isBodyweight: Bool? = nil, isFavorite: Bool? = nil, workoutDay: String? = nil, workoutPlan: WorkoutPlan? = nil) {
+        self.id = UUID()
         self.name = name
         self.plannedSets = plannedSets
         self.plannedReps = plannedReps
@@ -69,6 +75,8 @@ final class Exercise {
         self.equipment = equipment
         self.isBodyweight = isBodyweight
         self.isFavorite = isFavorite
+        self.workoutDay = workoutDay
+        self.workoutPlan = workoutPlan
     }
 }
 

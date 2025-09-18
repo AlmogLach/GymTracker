@@ -2,7 +2,7 @@
 //  ActiveWorkoutView.swift
 //  GymTracker
 //
-//  Created by almog lachiany on 09/09/2025.
+//  Enhanced Active Workout View with Modern UI
 //
 
 import SwiftUI
@@ -35,33 +35,36 @@ struct ActiveWorkoutView: View {
     var body: some View {
         NavigationView {
             ZStack {
-                Color(.systemGroupedBackground)
+                AppTheme.screenBG
                     .ignoresSafeArea()
                 
                 if workout != nil {
                     VStack(spacing: 0) {
-                        // Header with timer
-                        workoutHeaderView
+                        // Enhanced header with timer
+                        enhancedWorkoutHeaderView
                         
                         // Main content
                         ScrollView {
-                            VStack(spacing: 16) {
-                                // Current exercise
-                                currentExerciseCard
+                            VStack(spacing: AppTheme.s16) {
+                                // Current exercise card
+                                enhancedCurrentExerciseCard
                                 
                                 // Exercise list
-                                exerciseListView
+                                enhancedExerciseListView
+                                
+                                // Recent sets
+                                recentSetsSection
                             }
-                            .padding(16)
+                            .padding(AppTheme.s16)
                         }
                         
                         // Rest timer overlay
                         if showRestTimer {
-                            restTimerOverlay
+                            enhancedRestTimerOverlay
                         }
                         
                         // Bottom action bar
-                        bottomActionBar
+                        enhancedBottomActionBar
                     }
                 } else {
                     EmptyStateView(
@@ -85,89 +88,138 @@ struct ActiveWorkoutView: View {
         }
     }
     
-    private var workoutHeaderView: some View {
+    // MARK: - Enhanced Header View
+    
+    private var enhancedWorkoutHeaderView: some View {
         VStack(spacing: 0) {
-            // Top bar with controls
+            // Top control bar with improved design
             HStack {
                 Button(action: { completeWorkout() }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("סיום")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.red)
-                    .cornerRadius(20)
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 28, weight: .medium))
+                        .foregroundStyle(.white, AppTheme.error)
+                        .background(Circle().fill(.white))
+                        .clipShape(Circle())
+                }
+                
+                Spacer()
+                
+                // Workout status indicator
+                HStack(spacing: AppTheme.s8) {
+                    Circle()
+                        .fill(AppTheme.accent)
+                        .frame(width: 8, height: 8)
+                        .scaleEffect(workoutTimer != nil ? 1.0 : 0.6)
+                        .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: workoutTimer != nil)
+                    
+                    Text(workoutTimer != nil ? "פעיל" : "מושהה")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(AppTheme.secondary)
                 }
                 
                 Spacer()
                 
                 Button(action: { pauseWorkout() }) {
-                    HStack(spacing: 6) {
-                        Image(systemName: workoutTimer != nil ? "pause.fill" : "play.fill")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text(workoutTimer != nil ? "השהה" : "המשך")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(.orange)
-                    .cornerRadius(20)
+                    Image(systemName: workoutTimer != nil ? "pause.circle.fill" : "play.circle.fill")
+                        .font(.system(size: 28, weight: .medium))
+                        .foregroundStyle(AppTheme.accent)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.horizontal, AppTheme.s24)
+            .padding(.top, AppTheme.s20)
             
-            // Workout info and timer
-            VStack(spacing: 12) {
-                Text(workout?.label ?? "אימון")
-                    .font(.system(size: 28, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
+            // Main workout display with improved layout
+            VStack(spacing: AppTheme.s24) {
+                // Workout title with better hierarchy
+                VStack(spacing: AppTheme.s8) {
+                    HStack(spacing: AppTheme.s12) {
+                        // Workout type badge
+                        Text(workout?.label ?? "A")
+                            .font(.system(size: 18, weight: .bold, design: .rounded))
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(
+                                Circle()
+                                    .fill(AppTheme.accent)
+                                    .shadow(color: AppTheme.accent.opacity(0.3), radius: 4, x: 0, y: 2)
+                            )
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("אימון \(workout?.label ?? "A")")
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .foregroundStyle(AppTheme.primary)
+                            
+                            Text(workout?.plan.name ?? "")
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondary)
+                        }
+                        
+                        Spacer()
+                    }
+                }
                 
-                // Large timer display
-                Text(formatTime(elapsedSeconds))
-                    .font(.system(size: 48, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.blue)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(.blue.opacity(0.1))
-                    .cornerRadius(16)
-                
-                // Progress indicator
-                VStack(spacing: 8) {
-                    HStack {
-                        Text("התקדמות")
-                            .font(.caption)
+                // Enhanced timer with circular progress
+                ZStack {
+                    // Background circle
+                    Circle()
+                        .stroke(AppTheme.accent.opacity(0.1), lineWidth: 8)
+                        .frame(width: 120, height: 120)
+                    
+                    // Progress circle (optional - could show workout progress)
+                    Circle()
+                        .trim(from: 0, to: Double(currentExerciseIndex + 1) / Double(workout?.exercises.count ?? 1))
+                        .stroke(AppTheme.accent.opacity(0.3), style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                        .frame(width: 120, height: 120)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeInOut(duration: 0.5), value: currentExerciseIndex)
+                    
+                    VStack(spacing: AppTheme.s4) {
+                        Text(formatTime(elapsedSeconds))
+                            .font(.system(size: 20, weight: .bold, design: .monospaced))
+                            .foregroundStyle(AppTheme.accent)
+                        
+                        Text("זמן אימון")
+                            .font(.caption2)
                             .fontWeight(.medium)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppTheme.secondary)
+                    }
+                }
+                
+                // Compact progress indicator
+                VStack(spacing: AppTheme.s8) {
+                    HStack {
+                        Text("תרגיל \(currentExerciseIndex + 1) מתוך \(workout?.exercises.count ?? 1)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppTheme.primary)
                         
                         Spacer()
                         
-                        Text("\(currentExerciseIndex + 1)/\(workout?.exercises.count ?? 1)")
+                        Text("\(Int((Double(currentExerciseIndex + 1) / Double(workout?.exercises.count ?? 1)) * 100))%")
                             .font(.caption)
                             .fontWeight(.bold)
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppTheme.accent)
+                            .padding(.horizontal, AppTheme.s8)
+                            .padding(.vertical, AppTheme.s4)
+                            .background(AppTheme.accent.opacity(0.1))
+                            .clipShape(Capsule())
                     }
                     
                     ProgressView(value: Double(currentExerciseIndex + 1), total: Double(workout?.exercises.count ?? 1))
-                        .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                        .scaleEffect(y: 2)
+                        .progressViewStyle(LinearProgressViewStyle(tint: AppTheme.accent))
+                        .scaleEffect(y: 1.5)
+                        .animation(.easeInOut(duration: 0.3), value: currentExerciseIndex)
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 20)
+            .padding(.horizontal, AppTheme.s24)
+            .padding(.bottom, AppTheme.s24)
         }
         .background {
             LinearGradient(
                 colors: [
-                    Color(.systemGroupedBackground),
-                    Color(.secondarySystemGroupedBackground)
+                    AppTheme.accent.opacity(0.03),
+                    AppTheme.screenBG
                 ],
                 startPoint: .top,
                 endPoint: .bottom
@@ -175,85 +227,87 @@ struct ActiveWorkoutView: View {
         }
         .overlay(
             Rectangle()
-                .frame(height: 1)
-                .foregroundStyle(.separator),
+                .frame(height: 0.5)
+                .foregroundStyle(AppTheme.accent.opacity(0.2)),
             alignment: .bottom
         )
     }
     
-    private var currentExerciseCard: some View {
+    // MARK: - Enhanced Current Exercise Card
+    
+    private var enhancedCurrentExerciseCard: some View {
         Group {
             if let workout = workout, currentExerciseIndex < workout.exercises.count {
                 let exercise = workout.exercises[currentExerciseIndex]
                 
                 VStack(spacing: 0) {
                     // Exercise header
-                    VStack(spacing: 12) {
+                    VStack(spacing: AppTheme.s16) {
                         HStack {
-                            VStack(alignment: .leading, spacing: 2) {
+                            VStack(alignment: .leading, spacing: AppTheme.s4) {
                                 Text("תרגיל נוכחי")
                                     .font(.caption)
                                     .fontWeight(.medium)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(AppTheme.secondary)
                                     .textCase(.uppercase)
                                 
                                 Text(exercise.name)
                                     .font(.system(size: 24, weight: .bold, design: .rounded))
-                                    .foregroundStyle(.primary)
+                                    .foregroundStyle(AppTheme.primary)
                                     .multilineTextAlignment(.leading)
                             }
                             
                             Spacer()
                             
-                            // Exercise counter with modern design
-                            VStack(spacing: 4) {
+                            // Enhanced exercise counter
+                            VStack(spacing: AppTheme.s4) {
                                 ZStack {
                                     Circle()
-                                        .fill(.blue.opacity(0.1))
+                                        .fill(AppTheme.accent.opacity(0.1))
                                         .frame(width: 60, height: 60)
                                     
                                     VStack(spacing: 2) {
                                         Text("\(currentExerciseIndex + 1)")
                                             .font(.system(size: 20, weight: .bold, design: .rounded))
-                                            .foregroundStyle(.blue)
+                                            .foregroundStyle(AppTheme.accent)
                                         
                                         Text("\(workout.exercises.count)")
                                             .font(.caption2)
-                                            .foregroundStyle(.secondary)
+                                            .foregroundStyle(AppTheme.secondary)
                                     }
                                 }
                                 
                                 Text("מתוך")
                                     .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .foregroundStyle(AppTheme.secondary)
                             }
                         }
                         
-                        // Exercise details
+                        // Exercise details with enhanced chips
                         if exercise.plannedSets > 0 {
-                            HStack(spacing: 8) {
-                                ExerciseInfoChip(
+                            HStack(spacing: AppTheme.s8) {
+                                EnhancedExerciseInfoChip(
                                     value: "\(exercise.plannedSets)",
                                     label: "סטים",
                                     icon: "number.circle.fill",
-                                    color: .green
+                                    color: AppTheme.accent
                                 )
                                 
                                 if let plannedReps = exercise.plannedReps, plannedReps > 0 {
-                                    ExerciseInfoChip(
+                                    EnhancedExerciseInfoChip(
                                         value: "\(plannedReps)",
                                         label: "חזרות",
                                         icon: "repeat.circle.fill",
-                                        color: .blue
+                                        color: AppTheme.accent
                                     )
                                 }
                                 
                                 if let isBodyweight = exercise.isBodyweight, isBodyweight {
-                                    ExerciseInfoChip(
+                                    EnhancedExerciseInfoChip(
                                         value: "גוף",
                                         label: "משקל",
                                         icon: "figure.strengthtraining.traditional",
-                                        color: .orange
+                                        color: AppTheme.accent
                                     )
                                 }
                                 
@@ -261,422 +315,571 @@ struct ActiveWorkoutView: View {
                             }
                         }
                     }
-                    .padding(20)
+                    .padding(AppTheme.s20)
                     .background(.white.opacity(0.5))
                     
                     Divider()
                     
-                    // Quick set logging section
-                    VStack(alignment: .leading, spacing: 16) {
+                    // Enhanced set logging section
+                    VStack(alignment: .leading, spacing: AppTheme.s16) {
                         Text("רישום סט")
                             .font(.headline)
                             .fontWeight(.bold)
                         
-                        enhancedQuickSetLoggingView(for: exercise)
+                        enhancedSetLoggingView(for: exercise)
                         
-                        // Action buttons
-                        HStack(spacing: 12) {
+                        // Enhanced action buttons
+                        HStack(spacing: AppTheme.s12) {
                             Button(action: { previousExercise() }) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "chevron.right")
+                                HStack(spacing: AppTheme.s8) {
+                                    Image(systemName: "chevron.left")
                                         .font(.system(size: 14, weight: .semibold))
                                     Text("קודם")
                                         .fontWeight(.semibold)
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(Color(.systemGray5))
-                                .foregroundStyle(.primary)
-                                .cornerRadius(12)
+                                .padding(.vertical, AppTheme.s12)
+                                .background(AppTheme.secondaryBackground)
+                                .foregroundStyle(AppTheme.primary)
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
                             }
                             .disabled(currentExerciseIndex == 0)
                             
                             Button(action: { nextExercise() }) {
-                                HStack(spacing: 8) {
+                                HStack(spacing: AppTheme.s8) {
                                     Text("הבא")
                                         .fontWeight(.semibold)
-                                    Image(systemName: "chevron.left")
+                                    Image(systemName: "chevron.right")
                                         .font(.system(size: 14, weight: .semibold))
                                 }
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                                .background(.blue)
+                                .padding(.vertical, AppTheme.s12)
+                                .background(AppTheme.accent)
                                 .foregroundStyle(.white)
-                                .cornerRadius(12)
+                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
                             }
                         }
                     }
-                    .padding(20)
+                    .padding(AppTheme.s20)
                 }
-                .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 20))
+                .background(AppTheme.tertiaryBackground)
+                .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
                 .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
             }
         }
     }
     
-    private func enhancedQuickSetLoggingView(for exercise: Exercise) -> some View {
-        VStack(spacing: 16) {
-            // Set entry row
-            HStack(spacing: 12) {
-                // Weight input
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("משקל (ק״ג)")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
-                    
-                    HStack(spacing: 8) {
-                        TextField("0", value: $currentWeight, format: .number)
-                            .keyboardType(.decimalPad)
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .multilineTextAlignment(.center)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 16)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
+    // MARK: - Enhanced Set Logging View
+    
+    private func enhancedSetLoggingView(for exercise: Exercise) -> some View {
+        VStack(spacing: AppTheme.s20) {
+            // Modern input controls with improved design
+            HStack(spacing: AppTheme.s16) {
+                // Weight input section
+                VStack(spacing: AppTheme.s10) {
+                    HStack {
+                        Image(systemName: "scalemass")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.accent)
                         
-                        // Quick weight adjustment buttons
-                        VStack(spacing: 4) {
-                            Button(action: {
-                                let increment = settings.weightIncrementKg
-                                currentWeight += increment
-                                
-                                // Haptic feedback
-                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
-                                impactFeedback.impactOccurred()
-                            }) {
-                                Image(systemName: "plus")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(.blue)
-                                    .frame(width: 28, height: 28)
-                                    .background(.blue.opacity(0.1))
-                                    .cornerRadius(8)
-                            }
+                        Text("משקל (ק״ג)")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppTheme.primary)
+                        
+                        Spacer()
+                    }
+                    
+                    VStack(spacing: AppTheme.s8) {
+                        // Large weight display
+                        ZStack {
+                            RoundedRectangle(cornerRadius: AppTheme.r16)
+                                .fill(AppTheme.tertiaryBackground)
+                                .frame(height: 60)
                             
+                            TextField("0", value: $currentWeight, format: .number)
+                                .keyboardType(.decimalPad)
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                        
+                        // Compact adjustment buttons
+                        HStack(spacing: AppTheme.s8) {
                             Button(action: {
                                 let increment = settings.weightIncrementKg
                                 currentWeight = max(0, currentWeight - increment)
-                                
-                                // Haptic feedback
                                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                                 impactFeedback.impactOccurred()
                             }) {
                                 Image(systemName: "minus")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(.red)
-                                    .frame(width: 28, height: 28)
-                                    .background(.red.opacity(0.1))
-                                    .cornerRadius(8)
+                                    .foregroundStyle(AppTheme.primary)
+                                    .frame(width: 36, height: 36)
+                                    .background(AppTheme.secondaryBackground)
+                                    .clipShape(Circle())
                             }
-                        }
-                    }
-                }
-                
-                // Reps input
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("חזרות")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(.secondary)
-                    
-                    HStack(spacing: 8) {
-                        TextField("0", value: $currentReps, format: .number)
-                            .keyboardType(.numberPad)
-                            .font(.system(size: 18, weight: .semibold, design: .rounded))
-                            .multilineTextAlignment(.center)
-                            .padding(.vertical, 12)
-                            .padding(.horizontal, 16)
-                            .background(Color(.systemGray6))
-                            .cornerRadius(12)
-                        
-                        // Quick reps adjustment buttons
-                        VStack(spacing: 4) {
+                            
+                            Text("±\(settings.weightIncrementKg, specifier: "%.1f")")
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.secondary)
+                            
                             Button(action: {
-                                currentReps += 1
-                                
-                                // Haptic feedback
+                                let increment = settings.weightIncrementKg
+                                currentWeight += increment
                                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                                 impactFeedback.impactOccurred()
                             }) {
                                 Image(systemName: "plus")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(.green)
-                                    .frame(width: 28, height: 28)
-                                    .background(.green.opacity(0.1))
-                                    .cornerRadius(8)
+                                    .foregroundStyle(AppTheme.primary)
+                                    .frame(width: 36, height: 36)
+                                    .background(AppTheme.secondaryBackground)
+                                    .clipShape(Circle())
                             }
+                        }
+                    }
+                }
+                
+                // Reps input section
+                VStack(spacing: AppTheme.s10) {
+                    HStack {
+                        Image(systemName: "repeat")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.accent)
+                        
+                        Text("חזרות")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppTheme.primary)
+                        
+                        Spacer()
+                    }
+                    
+                    VStack(spacing: AppTheme.s8) {
+                        // Large reps display
+                        ZStack {
+                            RoundedRectangle(cornerRadius: AppTheme.r16)
+                                .fill(AppTheme.tertiaryBackground)
+                                .frame(height: 60)
                             
+                            TextField("0", value: $currentReps, format: .number)
+                                .keyboardType(.numberPad)
+                                .font(.system(size: 24, weight: .bold, design: .rounded))
+                                .multilineTextAlignment(.center)
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                        
+                        // Compact adjustment buttons
+                        HStack(spacing: AppTheme.s8) {
                             Button(action: {
                                 currentReps = max(0, currentReps - 1)
-                                
-                                // Haptic feedback
                                 let impactFeedback = UIImpactFeedbackGenerator(style: .light)
                                 impactFeedback.impactOccurred()
                             }) {
                                 Image(systemName: "minus")
                                     .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(.orange)
-                                    .frame(width: 28, height: 28)
-                                    .background(.orange.opacity(0.1))
-                                    .cornerRadius(8)
+                                    .foregroundStyle(AppTheme.primary)
+                                    .frame(width: 36, height: 36)
+                                    .background(AppTheme.secondaryBackground)
+                                    .clipShape(Circle())
+                            }
+                            
+                            Text("±1")
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.secondary)
+                            
+                            Button(action: {
+                                currentReps += 1
+                                let impactFeedback = UIImpactFeedbackGenerator(style: .light)
+                                impactFeedback.impactOccurred()
+                            }) {
+                                Image(systemName: "plus")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(AppTheme.primary)
+                                    .frame(width: 36, height: 36)
+                                    .background(AppTheme.secondaryBackground)
+                                    .clipShape(Circle())
                             }
                         }
                     }
                 }
             }
             
-            // Add set button
+            // Enhanced add set button with better visual design
             Button(action: { logSet(for: exercise) }) {
-                HStack(spacing: 10) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 18, weight: .semibold))
+                HStack(spacing: AppTheme.s12) {
+                    ZStack {
+                        Circle()
+                            .fill(.white.opacity(0.2))
+                            .frame(width: 32, height: 32)
+                        
+                        Image(systemName: "plus")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundStyle(.white)
+                    }
                     
                     Text("הוסף סט")
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                    
+                    Spacer()
+                    
+                    // Current set preview
+                    if currentWeight > 0 && currentReps > 0 {
+                        Text("\(currentWeight, specifier: "%.1f")×\(currentReps)")
+                            .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.white.opacity(0.8))
+                    }
                 }
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
+                .padding(.vertical, AppTheme.s16)
+                .padding(.horizontal, AppTheme.s20)
                 .background(
-                    LinearGradient(
-                        colors: [.blue, .blue.opacity(0.8)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+                    RoundedRectangle(cornerRadius: AppTheme.r16)
+                        .fill(AppTheme.accent)
+                        .shadow(color: AppTheme.accent.opacity(0.3), radius: 8, x: 0, y: 4)
                 )
-                .cornerRadius(16)
-                .shadow(color: .blue.opacity(0.3), radius: 4, x: 0, y: 2)
             }
             .scaleEffect(1.0)
-            .animation(.easeInOut(duration: 0.1), value: false)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: false)
         }
     }
     
-    private func quickSetLoggingView(for exercise: Exercise) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("לוג סט מהיר")
-                .font(.subheadline)
-                .fontWeight(.semibold)
+    // MARK: - Recent Sets Section
+    
+    private var recentSetsSection: some View {
+        VStack(alignment: .leading, spacing: AppTheme.s12) {
+            Text("סטים אחרונים")
+                .font(.headline)
+                .fontWeight(.bold)
             
-            // Quick set entry similar to WorkoutComponents but simplified
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("משקל")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    
-                    HStack {
-                        TextField("0", value: .constant(0.0), format: .number)
-                            .keyboardType(.decimalPad)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(width: 60)
-                        
-                        Text("ק״ג")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+            if let session = currentSession,
+               let workout = workout,
+               currentExerciseIndex < workout.exercises.count {
+                
+                let exercise = workout.exercises[currentExerciseIndex]
+                
+                let exerciseSession = session.exerciseSessions.first { $0.exerciseName == exercise.name }
+                
+                if let exerciseSession = exerciseSession, !exerciseSession.setLogs.isEmpty {
+                    VStack(spacing: AppTheme.s8) {
+                        ForEach(Array(exerciseSession.setLogs.suffix(3).enumerated()), id: \.offset) { index, setLog in
+                            HStack {
+                                Text("\(exerciseSession.setLogs.count - (exerciseSession.setLogs.suffix(3).count - index - 1))")
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .frame(width: 24, height: 24)
+                                    .background(AppTheme.accent.opacity(0.1))
+                                    .foregroundStyle(AppTheme.accent)
+                                    .clipShape(Circle())
+                                
+                                Text("\(setLog.weight, specifier: "%.1f") ק״ג")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                
+                                Text("×")
+                                    .font(.subheadline)
+                                    .foregroundStyle(AppTheme.secondary)
+                                
+                                Text("\(setLog.reps)")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                
+                                Spacer()
+                                
+                                if let rpe = setLog.rpe {
+                                    Text("RPE \(rpe, specifier: "%.1f")")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+                                        .padding(.horizontal, AppTheme.s8)
+                                        .padding(.vertical, AppTheme.s4)
+                                        .background(AppTheme.accent.opacity(0.1))
+                                        .foregroundStyle(AppTheme.accent)
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            .padding(AppTheme.s12)
+                            .background(AppTheme.secondaryBackground)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
                     }
+                } else {
+                    Text("אין סטים רשומים עדיין")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .padding(AppTheme.s24)
                 }
-                
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("חזרות")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    
-                    TextField("0", value: .constant(exercise.plannedReps ?? 0), format: .number)
-                        .keyboardType(.numberPad)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(width: 50)
-                }
-                
-                Spacer()
-                
-                Button("הוסף סט") {
-                    logSet(for: exercise)
-                }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.small)
+            } else {
+                Text("אין סטים רשומים עדיין")
+                    .font(.subheadline)
+                            .foregroundStyle(AppTheme.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(AppTheme.s24)
             }
         }
+        .appCard()
     }
     
-    private var indexedExercises: [(Int, Exercise)] {
-        workout?.exercises.enumerated().map { ($0, $1) } ?? []
-    }
+    // MARK: - Enhanced Exercise List View
     
-    private var exerciseListView: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("תרגילי האימון")
+    private var enhancedExerciseListView: some View {
+        VStack(alignment: .leading, spacing: AppTheme.s12) {
+            Text("אימון \(workout?.label ?? "A")")
                 .font(.headline)
-                .fontWeight(.semibold)
+                .fontWeight(.bold)
             
             ForEach(indexedExercises, id: \.1.id) { index, exercise in
-                    HStack {
-                        // Exercise number
-                        Text("\(index + 1)")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .frame(width: 24, height: 24)
-                            .background(index == currentExerciseIndex ? .blue : .gray.opacity(0.3))
-                            .foregroundStyle(index == currentExerciseIndex ? .white : .secondary)
-                            .clipShape(Circle())
+                HStack {
+                    // Exercise number
+                    Text("\(index + 1)")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .frame(width: 24, height: 24)
+                        .background(index == currentExerciseIndex ? AppTheme.accent : AppTheme.secondary.opacity(0.3))
+                        .foregroundStyle(index == currentExerciseIndex ? .white : AppTheme.secondary)
+                        .clipShape(Circle())
+                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(exercise.name)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
                         
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(exercise.name)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                            
-                            if exercise.plannedSets > 0 {
-                                Text("\(exercise.plannedSets) סטים")
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        
-                        Spacer()
-                        
-                        if index < currentExerciseIndex {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundStyle(.green)
-                        } else if index == currentExerciseIndex {
-                            Image(systemName: "play.circle.fill")
-                                .foregroundStyle(.blue)
+                        if exercise.plannedSets > 0 {
+                            Text("\(exercise.plannedSets) סטים")
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.secondary)
                         }
                     }
-                    .padding(.vertical, 8)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        currentExerciseIndex = index
+                    
+                    Spacer()
+                    
+                    if index < currentExerciseIndex {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(AppTheme.accent)
+                    } else if index == currentExerciseIndex {
+                        Image(systemName: "play.circle.fill")
+                            .foregroundStyle(AppTheme.accent)
                     }
                 }
+                .padding(.vertical, AppTheme.s8)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    currentExerciseIndex = index
+                }
+            }
         }
-        .padding(16)
-        .background(Color(.tertiarySystemGroupedBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+        .appCard()
     }
     
-    private var restTimerOverlay: some View {
+    // MARK: - Enhanced Rest Timer Overlay
+    
+    private var enhancedRestTimerOverlay: some View {
         ZStack {
             Color.black.opacity(0.3)
                 .ignoresSafeArea()
             
-            VStack(spacing: 24) {
-                VStack(spacing: 12) {
+            VStack(spacing: AppTheme.s24) {
+                VStack(spacing: AppTheme.s12) {
                     Image(systemName: "timer")
                         .font(.system(size: 40, weight: .bold))
-                        .foregroundStyle(.blue)
+                        .foregroundStyle(AppTheme.accent)
                     
                     Text("זמן מנוחה")
                         .font(.system(size: 24, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
+                        .foregroundStyle(AppTheme.primary)
                 }
                 
-                // Large circular timer
+                // Enhanced circular timer
                 ZStack {
                     Circle()
-                        .stroke(.blue.opacity(0.2), lineWidth: 8)
+                        .stroke(AppTheme.accent.opacity(0.2), lineWidth: 8)
                         .frame(width: 180, height: 180)
                     
                     Circle()
                         .trim(from: 0, to: Double(restSecondsRemaining) / Double(settings.defaultRestSeconds))
-                        .stroke(.blue, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                        .stroke(AppTheme.accent, style: StrokeStyle(lineWidth: 8, lineCap: .round))
                         .frame(width: 180, height: 180)
                         .rotationEffect(.degrees(-90))
                         .animation(.easeInOut(duration: 1), value: restSecondsRemaining)
                     
-                    VStack(spacing: 4) {
+                    VStack(spacing: AppTheme.s4) {
                         Text(formatTime(restSecondsRemaining))
                             .font(.system(size: 36, weight: .bold, design: .monospaced))
-                            .foregroundStyle(.blue)
+                            .foregroundStyle(AppTheme.accent)
                         
                         Text("נותרו")
                             .font(.caption)
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(AppTheme.secondary)
                     }
                 }
                 
-                HStack(spacing: 16) {
+                HStack(spacing: AppTheme.s16) {
                     Button(action: { skipRest() }) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: AppTheme.s8) {
                             Image(systemName: "forward.fill")
                                 .font(.system(size: 14, weight: .semibold))
                             Text("דלג")
                                 .fontWeight(.semibold)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
+                        .padding(.vertical, AppTheme.s16)
                         .background(.white.opacity(0.9))
-                        .foregroundStyle(.primary)
-                        .cornerRadius(16)
+                        .foregroundStyle(AppTheme.primary)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
                     }
                     
                     Button(action: { addRestTime(30) }) {
-                        HStack(spacing: 8) {
+                        HStack(spacing: AppTheme.s8) {
                             Image(systemName: "plus")
                                 .font(.system(size: 14, weight: .semibold))
                             Text("+30 שניות")
                                 .fontWeight(.semibold)
                         }
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(.blue)
+                        .padding(.vertical, AppTheme.s16)
+                        .background(AppTheme.accent)
                         .foregroundStyle(.white)
-                        .cornerRadius(16)
+                        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, AppTheme.s20)
             }
-            .padding(32)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 24))
+            .padding(AppTheme.s32)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: AppTheme.r16))
             .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
         }
         .transition(.opacity.combined(with: .scale(scale: 0.9)))
     }
     
-    private var bottomActionBar: some View {
+    // MARK: - Enhanced Bottom Action Bar
+    
+    private var enhancedBottomActionBar: some View {
         VStack(spacing: 0) {
-            Divider()
+            Rectangle()
+                .frame(height: 0.5)
+                .foregroundStyle(AppTheme.accent.opacity(0.1))
             
-            HStack(spacing: 16) {
-                Button(action: { completeWorkout() }) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("סיום אימון")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+            VStack(spacing: AppTheme.s16) {
+                // Quick action buttons in a more modern layout
+                HStack(spacing: AppTheme.s12) {
+                    // Rest timer button - now more prominent
+                    Button(action: { startRestTimer() }) {
+                        VStack(spacing: AppTheme.s6) {
+                            ZStack {
+                                Circle()
+                                    .fill(AppTheme.accent.opacity(0.1))
+                                    .frame(width: 44, height: 44)
+                                
+                                Image(systemName: "timer")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+                            
+                            Text("מנוחה")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(AppTheme.primary)
+                        }
                     }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(.red)
-                    .cornerRadius(16)
+                    
+                    Spacer()
+                    
+                    // Exercise navigation
+                    HStack(spacing: AppTheme.s8) {
+                        Button(action: { previousExercise() }) {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(currentExerciseIndex == 0 ? AppTheme.secondary : AppTheme.accent)
+                                .frame(width: 40, height: 40)
+                                .background(AppTheme.secondaryBackground)
+                                .clipShape(Circle())
+                        }
+                        .disabled(currentExerciseIndex == 0)
+                        
+                        Button(action: { nextExercise() }) {
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(AppTheme.accent)
+                                .frame(width: 40, height: 40)
+                                .background(AppTheme.accent.opacity(0.1))
+                                .clipShape(Circle())
+                        }
+                    }
+                    
+                    Spacer()
+                    
+                    // Finish workout button - minimized
+                    Button(action: { completeWorkout() }) {
+                        VStack(spacing: AppTheme.s6) {
+                            ZStack {
+                                Circle()
+                                    .fill(AppTheme.error.opacity(0.1))
+                                    .frame(width: 44, height: 44)
+                                
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(AppTheme.error)
+                            }
+                            
+                            Text("סיום")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(AppTheme.primary)
+                        }
+                    }
                 }
+                .padding(.horizontal, AppTheme.s24)
+                .padding(.top, AppTheme.s16)
                 
-                Button(action: { startRestTimer() }) {
-                    HStack(spacing: 10) {
-                        Image(systemName: "timer.circle.fill")
-                            .font(.system(size: 16, weight: .semibold))
-                        Text("מנוחה")
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                // Workout progress summary
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("זמן: \(formatTime(elapsedSeconds))")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(AppTheme.primary)
+                        
+                        Text("תרגיל \(currentExerciseIndex + 1)/\(workout?.exercises.count ?? 1)")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.secondary)
                     }
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(
-                        LinearGradient(
-                            colors: [.orange, .orange.opacity(0.8)],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    )
-                    .cornerRadius(16)
-                    .shadow(color: .orange.opacity(0.3), radius: 4, x: 0, y: 2)
+                    
+                    Spacer()
+                    
+                    if let session = currentSession,
+                       let workout = workout,
+                       currentExerciseIndex < workout.exercises.count {
+                        let exercise = workout.exercises[currentExerciseIndex]
+                        let exerciseSession = session.exerciseSessions.first { $0.exerciseName == exercise.name }
+                        let setsCompleted = exerciseSession?.setLogs.count ?? 0
+                        
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("סטים: \(setsCompleted)/\(exercise.plannedSets)")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(AppTheme.primary)
+                            
+                            if setsCompleted > 0 {
+                                Text("נפח: \(Int(exerciseSession?.setLogs.reduce(0) { $0 + ($1.weight * Double($1.reps)) } ?? 0)) ק״ג")
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.secondary)
+                            }
+                        }
+                    }
                 }
+                .padding(.horizontal, AppTheme.s24)
+                .padding(.bottom, AppTheme.s16)
             }
-            .padding(20)
         }
         .background(.regularMaterial)
+    }
+    
+    // MARK: - Computed Properties
+    
+    private var indexedExercises: [(Int, Exercise)] {
+        workout?.exercises.enumerated().map { ($0, $1) } ?? []
     }
     
     // MARK: - Functions
@@ -853,30 +1056,32 @@ struct ActiveWorkoutView: View {
     }
 }
 
-struct ExerciseInfoChip: View {
+// MARK: - Enhanced Exercise Info Chip
+
+struct EnhancedExerciseInfoChip: View {
     let value: String
     let label: String
     let icon: String
     let color: Color
     
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: AppTheme.s6) {
             Image(systemName: icon)
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(color)
             
             Text(value)
                 .font(.system(size: 14, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
+                                    .foregroundStyle(AppTheme.primary)
             
             Text(label)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.secondary)
+                            .foregroundStyle(AppTheme.secondary)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, AppTheme.s12)
+        .padding(.vertical, AppTheme.s8)
         .background(color.opacity(0.1))
-        .cornerRadius(12)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
     }
 }
 

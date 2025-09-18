@@ -220,3 +220,33 @@ struct ModernExerciseLogRow: View {
         generator.notificationOccurred(style)
     }
 }
+
+#Preview {
+    let exercise = Exercise(
+        name: "סקוואט",
+        plannedSets: 3,
+        plannedReps: 8,
+        notes: "תרגיל בסיסי",
+        label: "A",
+        muscleGroup: "רגליים",
+        equipment: "משקולת",
+        workoutDay: "A"
+    )
+    
+    let session = WorkoutSession(
+        date: Date(),
+        planName: "תוכנית A",
+        workoutLabel: "A",
+        isCompleted: false
+    )
+    
+    return ModernExerciseLogRow(
+        exercise: exercise,
+        session: .constant(session),
+        lastDefaults: (reps: 8, weight: 60.0, rpe: 8.0),
+        weightUnit: .kg,
+        weightStep: 2.5
+    )
+    .padding()
+    .modelContainer(for: [WorkoutPlan.self, Exercise.self, WorkoutSession.self, ExerciseSession.self, SetLog.self, AppSettings.self], inMemory: true)
+}

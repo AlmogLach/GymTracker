@@ -249,3 +249,8 @@ struct SettingRow<Content: View>: View {
         .padding(.vertical, 8)
     }
 }
+
+#Preview {
+    SettingsView()
+        .modelContainer(for: [WorkoutPlan.self, Exercise.self, WorkoutSession.self, ExerciseSession.self, SetLog.self, AppSettings.self], inMemory: true)
+}

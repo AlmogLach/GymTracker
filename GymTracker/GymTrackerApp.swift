@@ -19,8 +19,22 @@ struct GymTrackerApp: App {
             SetLog.self,
             AppSettings.self,
         ])
+        
+        // Clean up old database files
+        let fileManager = FileManager.default
+        let documentsPath = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        
+        // Remove old database files
+        let oldFiles = ["default_v2.store", "default_v4.store", "default_v5.store", "default_v6.store"]
+        for fileName in oldFiles {
+            let fileURL = documentsPath.appendingPathComponent(fileName)
+            if fileManager.fileExists(atPath: fileURL.path) {
+                try? fileManager.removeItem(at: fileURL)
+                print("Removed old database file: \(fileName)")
+            }
+        }
         let modelConfiguration = ModelConfiguration(
-            "default_v2",
+            "gymtracker_fixed",
             schema: schema,
             isStoredInMemoryOnly: false,
             allowsSave: true
@@ -29,7 +43,22 @@ struct GymTrackerApp: App {
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // If migration fails, try with a fresh database
+            print("Migration failed, creating fresh database: \(error)")
+            let freshConfiguration = ModelConfiguration(
+                "gymtracker_backup",
+                schema: schema,
+                isStoredInMemoryOnly: false,
+                allowsSave: true
+            )
+            do {
+                let container = try ModelContainer(for: schema, configurations: [freshConfiguration])
+                // Create sample data in the fresh container
+                GymTrackerApp.createSampleDataIfNeeded(container: container)
+                return container
+            } catch {
+                fatalError("Could not create ModelContainer: \(error)")
+            }
         }
     }()
 
@@ -37,34 +66,122 @@ struct GymTrackerApp: App {
         WindowGroup {
             ContentView()
                 .onAppear {
-                    // Add sample data if none exists
                     let context = sharedModelContainer.mainContext
-                    let plans = try? context.fetch(FetchDescriptor<WorkoutPlan>())
-                    if plans?.isEmpty == true {
-                        let samplePlan = WorkoutPlan(
-                            name: "תוכנית בסיסית",
-                            planType: .fullBody,
-                            schedule: [
-                                PlannedDay(weekday: 1, label: "Full"),
-                                PlannedDay(weekday: 3, label: "Full"),
-                                PlannedDay(weekday: 5, label: "Full")
-                            ]
-                        )
-                        context.insert(samplePlan)
+
+                    // Fix any orphaned exercises and ensure proper relationships
+                    do {
+                        let allPlans = try context.fetch(FetchDescriptor<WorkoutPlan>())
+                        let allExercises = try context.fetch(FetchDescriptor<Exercise>())
                         
-                        let sampleExercise = Exercise(
-                            name: "סקוואט",
-                            plannedSets: 3,
-                            plannedReps: 10,
-                            label: "Full"
-                        )
-                        context.insert(sampleExercise)
-                        samplePlan.exercises.append(sampleExercise)
-                        
-                        try? context.save()
+                        print("Found \(allPlans.count) plans and \(allExercises.count) exercises")
+
+
+                        // Fix plans and exercises that don't have proper IDs and relationships
+                        for plan in allPlans {
+                            if plan.id == nil {
+                                plan.id = UUID()
+                            }
+                            for exercise in plan.exercises {
+                                if exercise.workoutPlan == nil {
+                                    exercise.workoutPlan = plan
+                                }
+                                if exercise.id == nil {
+                                    exercise.id = UUID()
+                                }
+                            }
+                        }
+
+                        // Remove orphaned exercises that aren't in any plan
+                        let exercisesInPlans = Set(allPlans.flatMap { $0.exercises.compactMap { $0.id } })
+                        for exercise in allExercises {
+                            if let exerciseId = exercise.id, !exercisesInPlans.contains(exerciseId) {
+                                context.delete(exercise)
+                            }
+                        }
+
+                        try context.save()
+
+                        // Add sample data if no plans exist
+                        if allPlans.isEmpty {
+                            let samplePlan = WorkoutPlan(
+                                name: "תוכנית בסיסית",
+                                planType: .fullBody,
+                                schedule: [
+                                    PlannedDay(weekday: 1, label: "Full"),
+                                    PlannedDay(weekday: 3, label: "Full"),
+                                    PlannedDay(weekday: 5, label: "Full")
+                                ]
+                            )
+                            // Ensure the plan has an ID
+                            if samplePlan.id == nil {
+                                samplePlan.id = UUID()
+                            }
+                            context.insert(samplePlan)
+
+                            let sampleExercise = Exercise(
+                                name: "סקוואט",
+                                plannedSets: 3,
+                                plannedReps: 10,
+                                label: "Full",
+                                workoutDay: nil
+                            )
+                            // Ensure the exercise has an ID
+                            if sampleExercise.id == nil {
+                                sampleExercise.id = UUID()
+                            }
+                            sampleExercise.workoutPlan = samplePlan
+                            context.insert(sampleExercise)
+                            samplePlan.exercises.append(sampleExercise)
+
+                            try context.save()
+                            print("Sample data created successfully")
+                        }
+                    } catch {
+                        print("Error during data migration: \(error)")
                     }
                 }
         }
         .modelContainer(sharedModelContainer)
+    }
+    
+    private static func createSampleDataIfNeeded(container: ModelContainer) {
+        let context = container.mainContext
+        do {
+            let allPlans = try context.fetch(FetchDescriptor<WorkoutPlan>())
+            if allPlans.isEmpty {
+                let samplePlan = WorkoutPlan(
+                    name: "תוכנית בסיסית",
+                    planType: .fullBody,
+                    schedule: [
+                        PlannedDay(weekday: 1, label: "Full"),
+                        PlannedDay(weekday: 3, label: "Full"),
+                        PlannedDay(weekday: 5, label: "Full")
+                    ]
+                )
+                if samplePlan.id == nil {
+                    samplePlan.id = UUID()
+                }
+                context.insert(samplePlan)
+                
+                let sampleExercise = Exercise(
+                    name: "סקוואט",
+                    plannedSets: 3,
+                    plannedReps: 10,
+                    label: "Full",
+                    workoutDay: nil
+                )
+                if sampleExercise.id == nil {
+                    sampleExercise.id = UUID()
+                }
+                sampleExercise.workoutPlan = samplePlan
+                context.insert(sampleExercise)
+                samplePlan.exercises.append(sampleExercise)
+                
+                try context.save()
+                print("Sample data created in fresh container")
+            }
+        } catch {
+            print("Error creating sample data: \(error)")
+        }
     }
 }

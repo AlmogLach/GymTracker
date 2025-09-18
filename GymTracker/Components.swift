@@ -90,17 +90,17 @@ struct StatTile: View {
     let label: String
     let icon: String
     let color: Color
-    
+
     var body: some View {
         VStack(spacing: 4) {
             Image(systemName: icon)
                 .font(.title2)
                 .foregroundStyle(color)
-            
+
             Text(value)
                 .font(.title3)
                 .fontWeight(.bold)
-            
+
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -110,6 +110,33 @@ struct StatTile: View {
         .padding(.vertical, 12)
         .background(Color(.secondarySystemGroupedBackground))
         .cornerRadius(12)
+    }
+}
+
+struct StatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: AppTheme.s8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundStyle(color)
+
+            Text(value)
+                .font(.title2)
+                .fontWeight(.bold)
+
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(AppTheme.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding(AppTheme.s12)
+        .background(AppTheme.cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
 
@@ -123,23 +150,42 @@ struct DayChip: View {
     }
     
     var body: some View {
-        VStack(spacing: 2) {
+        VStack(spacing: 3) {
             Text(dayAbbreviation(day.weekday))
-                .font(.caption2)
-                .fontWeight(.semibold)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(isSelected ? .white : .primary)
             
             if !day.label.isEmpty {
                 Text(day.label)
-                    .font(.caption2)
-                    .fontWeight(.medium)
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundStyle(isSelected ? .white.opacity(0.9) : .secondary)
             }
         }
-        .padding(.horizontal, AppTheme.s8)
-        .padding(.vertical, 4)
-        .background(isSelected ? AppTheme.accent : AppTheme.accent.opacity(0.1))
-        .foregroundStyle(isSelected ? .white : AppTheme.accent)
-        .cornerRadius(8)
-        .frame(minWidth: 28)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isSelected ? AppTheme.accent : Color(.secondarySystemGroupedBackground))
+                .shadow(
+                    color: isSelected ? AppTheme.accent.opacity(0.3) : .black.opacity(0.05),
+                    radius: isSelected ? 4 : 2,
+                    x: 0,
+                    y: isSelected ? 2 : 1
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(
+                    isSelected ? AppTheme.accent.opacity(0.2) : Color(.separator),
+                    lineWidth: isSelected ? 1 : 0.5
+                )
+        )
+        .scaleEffect(isSelected ? 1.05 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isSelected)
+        .frame(minWidth: 36, minHeight: 36)
+        .contentShape(Rectangle())
+        .accessibilityLabel("\(dayAbbreviation(day.weekday))\(day.label.isEmpty ? "" : " - \(day.label)")")
+        .accessibilityHint(isSelected ? "יום נבחר" : "יום לא נבחר")
     }
     
     private func dayAbbreviation(_ weekday: Int) -> String {
@@ -147,4 +193,79 @@ struct DayChip: View {
         let index = max(1, min(7, weekday)) - 1
         return dayNames[index]
     }
+}
+
+// MARK: - Previews
+
+#Preview("PillBadge") {
+    VStack(spacing: 16) {
+        PillBadge(text: "חזה")
+        PillBadge(text: "משקל גוף", icon: "figure.strengthtraining.traditional")
+        PillBadge(text: "A", icon: "dumbbell")
+    }
+    .padding()
+}
+
+#Preview("PrimaryButton") {
+    PrimaryButton(title: "התחל אימון") {
+        print("Button tapped")
+    }
+    .padding()
+}
+
+#Preview("EmptyStateView") {
+    EmptyStateView(
+        iconSystemName: "dumbbell",
+        title: "אין תרגילים",
+        message: "הוסף תרגילים כדי להתחיל",
+        buttonTitle: "הוסף תרגיל"
+    ) {
+        print("Add exercise tapped")
+    }
+    .padding()
+}
+
+#Preview("StatTile") {
+    HStack(spacing: 12) {
+        StatTile(
+            value: "5",
+            label: "אימונים",
+            icon: "figure.strengthtraining.traditional",
+            color: .blue
+        )
+        StatTile(
+            value: "3",
+            label: "תוכניות",
+            icon: "list.bullet.rectangle",
+            color: .green
+        )
+    }
+    .padding()
+}
+
+#Preview("StatCard") {
+    HStack(spacing: 12) {
+        StatCard(
+            title: "אימונים השבוע",
+            value: "5",
+            icon: "figure.strengthtraining.traditional",
+            color: .blue
+        )
+        StatCard(
+            title: "תרגילים שונים",
+            value: "12",
+            icon: "dumbbell.fill",
+            color: .green
+        )
+    }
+    .padding()
+}
+
+#Preview("DayChip") {
+    HStack(spacing: 8) {
+        DayChip(day: PlannedDay(weekday: 1, label: "A"), isSelected: true)
+        DayChip(day: PlannedDay(weekday: 3, label: "B"), isSelected: false)
+        DayChip(day: PlannedDay(weekday: 5, label: "C"), isSelected: false)
+    }
+    .padding()
 }

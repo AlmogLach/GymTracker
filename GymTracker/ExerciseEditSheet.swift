@@ -327,3 +327,22 @@ struct ExerciseInfoRow: View {
         .cornerRadius(16)
     }
 }
+
+#Preview {
+    ExerciseEditSheet(
+        exercise: Exercise(
+            name: "סקוואט",
+            plannedSets: 3,
+            plannedReps: 8,
+            notes: "תרגיל בסיסי לפלג גוף תחתון",
+            label: "A",
+            muscleGroup: "רגליים",
+            equipment: "משקולת",
+            isBodyweight: false,
+            workoutDay: "A"
+        ),
+        onSave: { _ in },
+        onCancel: { }
+    )
+    .modelContainer(for: [WorkoutPlan.self, Exercise.self, WorkoutSession.self, ExerciseSession.self, SetLog.self, AppSettings.self], inMemory: true)
+}

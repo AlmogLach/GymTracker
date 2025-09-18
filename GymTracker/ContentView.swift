@@ -10,31 +10,69 @@ import SwiftData
 
 struct ContentView: View {
     @State private var selectedTab = 0
+    @Environment(\.modelContext) private var modelContext
+    @Query private var settingsList: [AppSettings]
     
     var body: some View {
         TabView(selection: $selectedTab) {
             DashboardView(onNavigateToHistory: {
                 selectedTab = 2 // Navigate to workout edit tab (history section)
             })
-                .tabItem { Label("לוח", systemImage: "clock.badge.checkmark") }
+                .tabItem { 
+                    Label("לוח", systemImage: selectedTab == 0 ? "house.fill" : "house")
+                }
                 .tag(0)
 
             PlansView()
-                .tabItem { Label("תוכניות", systemImage: "list.bullet.rectangle") }
+                .tabItem { 
+                    Label("תוכניות", systemImage: selectedTab == 1 ? "list.bullet.rectangle.fill" : "list.bullet.rectangle")
+                }
                 .tag(1)
 
             WorkoutEditView()
-                .tabItem { Label("עריכת אימונים", systemImage: "square.and.pencil") }
+                .tabItem { 
+                    Label("אימונים", systemImage: selectedTab == 2 ? "dumbbell.fill" : "dumbbell")
+                }
                 .tag(2)
 
             ProgressViewScreen()
-                .tabItem { Label("סטטיסטיקות", systemImage: "chart.bar.xaxis") }
+                .tabItem { 
+                    Label("סטטיסטיקות", systemImage: selectedTab == 3 ? "chart.bar.fill" : "chart.bar")
+                }
                 .tag(3)
 
             SettingsView()
-                .tabItem { Label("הגדרות", systemImage: "gearshape") }
+                .tabItem { 
+                    Label("הגדרות", systemImage: selectedTab == 4 ? "gearshape.fill" : "gearshape")
+                }
                 .tag(4)
         }
+        .accentColor(AppTheme.accent)
+        .onAppear {
+            setupAppearance()
+        }
+    }
+    
+    private func setupAppearance() {
+        // Customize tab bar appearance
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = UIColor.systemBackground
+        
+        // Selected tab color
+        appearance.stackedLayoutAppearance.selected.iconColor = UIColor(AppTheme.accent)
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+            .foregroundColor: UIColor(AppTheme.accent)
+        ]
+        
+        // Unselected tab color
+        appearance.stackedLayoutAppearance.normal.iconColor = UIColor.secondaryLabel
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+            .foregroundColor: UIColor.secondaryLabel
+        ]
+        
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
     }
 }
 

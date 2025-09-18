@@ -523,3 +523,8 @@ struct ModernDayChip: View {
         return symbols[index]
     }
 }
+
+#Preview {
+    NewPlanSheet()
+        .modelContainer(for: [WorkoutPlan.self, Exercise.self, WorkoutSession.self, ExerciseSession.self, SetLog.self, AppSettings.self], inMemory: true)
+}

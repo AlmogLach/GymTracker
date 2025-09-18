@@ -266,78 +266,243 @@ struct SetRow: View {
     let onDelete: () -> Void
     
     @FocusState private var focusedField: Field?
+    @State private var showActions: Bool = false
+    @State private var isCompleted: Bool = false
     
     private enum Field {
         case reps, weight
     }
     
     var body: some View {
-        HStack(spacing: AppTheme.s8) {
-            // Set number
-            Text("\(setIndex + 1)")
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundStyle(.secondary)
-                .frame(width: 20, alignment: .center)
-            
-            // Reps field
-            NumericField(
-                title: "חזרות",
-                value: Binding(
-                    get: { Double(setLog.reps) },
-                    set: { setLog.reps = Int($0) }
-                ),
-                step: 1,
-                range: 1...100
-            )
-            
-            // Weight field
-            NumericField(
-                title: "משקל",
-                unit: weightUnit.symbol,
-                value: $setLog.weight,
-                step: weightStep,
-                range: 0...999
-            )
-            
-            // RPE picker
-            RPEPicker(rpe: $setLog.rpe)
-            
-            // Warmup toggle
-            Button(action: {
-                setLog.isWarmup?.toggle()
-                hapticFeedback(.light)
-            }) {
-                Image(systemName: setLog.isWarmup == true ? "flame.fill" : "flame")
-                    .font(.caption)
-                    .foregroundStyle(setLog.isWarmup == true ? .orange : .secondary)
-            }
-            .buttonStyle(.borderless)
-            
-            // Actions
+        HStack(spacing: AppTheme.s12) {
+            // Set number with completion indicator
             HStack(spacing: 4) {
+                ZStack {
+                    Circle()
+                        .fill(isCompleted ? AppTheme.accent : Color(.systemGray5))
+                        .frame(width: 24, height: 24)
+                    
+                    if isCompleted {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(.white)
+                    } else {
+                        Text("\(setIndex + 1)")
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+                    }
+                }
+                .onTapGesture {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isCompleted.toggle()
+                    }
+                    hapticFeedback(.medium)
+                }
+                
+                if setLog.isWarmup == true {
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.orange)
+                }
+            }
+            .frame(width: 40, alignment: .leading)
+            
+            // Reps field with modern styling
+            VStack(alignment: .leading, spacing: 2) {
+                Text("חזרות")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                
+                HStack(spacing: 4) {
+                    TextField("0", value: Binding(
+                        get: { Double(setLog.reps) },
+                        set: { setLog.reps = Int($0) }
+                    ), format: .number)
+                    .keyboardType(.numberPad)
+                    .textFieldStyle(.roundedBorder)
+                    .focused($focusedField, equals: .reps)
+                    .frame(width: 50)
+                    .multilineTextAlignment(.center)
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    
+                    VStack(spacing: 1) {
+                        Button(action: {
+                            setLog.reps = min(100, setLog.reps + 1)
+                            hapticFeedback(.light)
+                        }) {
+                            Image(systemName: "chevron.up")
+                                .font(.system(size: 8, weight: .medium))
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(setLog.reps >= 100)
+                        
+                        Button(action: {
+                            setLog.reps = max(1, setLog.reps - 1)
+                            hapticFeedback(.light)
+                        }) {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 8, weight: .medium))
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(setLog.reps <= 1)
+                    }
+                    .frame(width: 16)
+                }
+            }
+            
+            // Weight field with modern styling
+            VStack(alignment: .leading, spacing: 2) {
+                Text("משקל")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                
+                HStack(spacing: 4) {
+                    TextField("0", value: $setLog.weight, format: .number)
+                        .keyboardType(.decimalPad)
+                        .textFieldStyle(.roundedBorder)
+                        .focused($focusedField, equals: .weight)
+                        .frame(width: 60)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                    
+                    Text(weightUnit.symbol)
+                        .font(.caption2)
+                        .foregroundStyle(.tertiary)
+                        .frame(minWidth: 20)
+                    
+                    VStack(spacing: 1) {
+                        Button(action: {
+                            setLog.weight = min(999, setLog.weight + weightStep)
+                            hapticFeedback(.light)
+                        }) {
+                            Image(systemName: "chevron.up")
+                                .font(.system(size: 8, weight: .medium))
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(setLog.weight >= 999)
+                        
+                        Button(action: {
+                            setLog.weight = max(0, setLog.weight - weightStep)
+                            hapticFeedback(.light)
+                        }) {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 8, weight: .medium))
+                        }
+                        .buttonStyle(.borderless)
+                        .disabled(setLog.weight <= 0)
+                    }
+                    .frame(width: 16)
+                }
+            }
+            
+            // Enhanced RPE picker
+            VStack(alignment: .leading, spacing: 2) {
+                Text("RPE")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                
+                RPEChipsPicker(rpe: $setLog.rpe)
+                    .frame(width: 100)
+            }
+            
+            Spacer()
+            
+            // Action buttons with improved styling
+            HStack(spacing: 6) {
+                // Warmup toggle
+                Button(action: {
+                    setLog.isWarmup?.toggle()
+                    hapticFeedback(.light)
+                }) {
+                    Image(systemName: setLog.isWarmup == true ? "flame.fill" : "flame")
+                        .font(.system(size: 12))
+                        .foregroundStyle(setLog.isWarmup == true ? .orange : .secondary)
+                        .frame(width: 24, height: 24)
+                        .background(
+                            Circle()
+                                .fill(setLog.isWarmup == true ? .orange.opacity(0.1) : Color(.systemGray6))
+                        )
+                }
+                .buttonStyle(.plain)
+                
+                // Duplicate button
                 Button(action: {
                     onDuplicate()
                     hapticFeedback(.medium)
                 }) {
                     Image(systemName: "doc.on.doc")
-                        .font(.caption)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.blue)
+                        .frame(width: 24, height: 24)
+                        .background(
+                            Circle()
+                                .fill(.blue.opacity(0.1))
+                        )
                 }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.blue)
+                .buttonStyle(.plain)
                 
+                // Delete button
                 Button(action: {
                     onDelete()
                     hapticFeedback(.heavy)
                 }) {
                     Image(systemName: "trash")
-                        .font(.caption)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red)
+                        .frame(width: 24, height: 24)
+                        .background(
+                            Circle()
+                                .fill(.red.opacity(0.1))
+                        )
                 }
-                .buttonStyle(.borderless)
-                .foregroundStyle(.red)
+                .buttonStyle(.plain)
+            }
+            .opacity(showActions ? 1 : 0.7)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color(.secondarySystemGroupedBackground))
+                .stroke(
+                    isCompleted ? AppTheme.accent.opacity(0.3) : Color(.separator),
+                    lineWidth: isCompleted ? 1.5 : 0.5
+                )
+        )
+        .shadow(
+            color: isCompleted ? AppTheme.accent.opacity(0.1) : .black.opacity(0.05),
+            radius: isCompleted ? 3 : 1,
+            x: 0,
+            y: isCompleted ? 1 : 0
+        )
+        .scaleEffect(isCompleted ? 1.02 : 1.0)
+        .animation(.easeInOut(duration: 0.2), value: isCompleted)
+        .onHover { hovering in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                showActions = hovering
             }
         }
-        .padding(.vertical, 4)
+        .onAppear {
+            // Auto-complete if reps and weight are filled
+            if setLog.reps > 0 && setLog.weight > 0 {
+                isCompleted = true
+            }
+        }
+        .onChange(of: setLog.reps) { _, _ in
+            updateCompletionStatus()
+        }
+        .onChange(of: setLog.weight) { _, _ in
+            updateCompletionStatus()
+        }
+    }
+    
+    private func updateCompletionStatus() {
+        let shouldBeCompleted = setLog.reps > 0 && setLog.weight > 0
+        if isCompleted != shouldBeCompleted {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isCompleted = shouldBeCompleted
+            }
+        }
     }
     
     private func hapticFeedback(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
@@ -922,4 +1087,167 @@ struct ActionChip: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+// MARK: - Previews
+
+#Preview("NumericField") {
+    VStack(spacing: 16) {
+        NumericField(
+            title: "משקל",
+            unit: "ק״ג",
+            value: .constant(60.0),
+            step: 2.5
+        )
+        NumericField(
+            title: "חזרות",
+            unit: nil,
+            value: .constant(8),
+            step: 1
+        )
+    }
+    .padding()
+}
+
+#Preview("RPEPicker") {
+    RPEPicker(rpe: .constant(8.0))
+        .padding()
+}
+
+#Preview("LastTimeChip") {
+    VStack(spacing: 8) {
+        LastTimeChip(
+            lastSet: SetLog(reps: 8, weight: 60.0, rpe: 8.0),
+            date: Date()
+        )
+        LastTimeChip(
+            lastSet: SetLog(reps: 12, weight: 45.0, rpe: 7.5),
+            date: Date()
+        )
+    }
+    .padding()
+}
+
+#Preview("ExerciseHeader") {
+    let exercise = Exercise(
+        name: "סקוואט",
+        plannedSets: 3,
+        plannedReps: 8,
+        notes: "תרגיל בסיסי",
+        workoutDay: "A"
+    )
+    
+    let lastSet = SetLog(reps: 8, weight: 60.0, rpe: 8.0)
+    
+    return ExerciseHeader(
+        exercise: exercise,
+        lastSet: lastSet,
+        lastDate: Date(),
+        onAddSet: {}
+    )
+    .padding()
+}
+
+#Preview("SetRow") {
+    SetRow(
+        setIndex: 0,
+        setLog: .constant(SetLog(reps: 8, weight: 60.0, rpe: 8.0)),
+        weightUnit: .kg,
+        weightStep: 2.5,
+        onDuplicate: {},
+        onDelete: {}
+    )
+    .padding()
+}
+
+#Preview("ExerciseQuickActions") {
+    ExerciseQuickActions(
+        onDuplicateLastSet: {},
+        onAddWarmupSet: {},
+        onClearSets: {},
+        onWarmupRamp: {}
+    )
+    .padding()
+}
+
+#Preview("CompactNumericField") {
+    VStack(spacing: 8) {
+        CompactNumericField(
+            title: "משקל",
+            unit: "ק״ג",
+            value: .constant(60.0),
+            step: 2.5,
+            range: 0...999
+        )
+        CompactNumericField(
+            title: "חזרות",
+            unit: nil,
+            value: .constant(8),
+            step: 1,
+            range: 1...100
+        )
+    }
+    .padding()
+}
+
+#Preview("RPEChipsPicker") {
+    RPEChipsPicker(rpe: .constant(8.0))
+        .padding()
+}
+
+#Preview("ExerciseCard") {
+    let exercise = Exercise(
+        name: "סקוואט",
+        plannedSets: 3,
+        plannedReps: 8,
+        notes: "תרגיל בסיסי לפלג גוף תחתון",
+        label: "A",
+        muscleGroup: "רגליים",
+        equipment: "משקולת",
+        workoutDay: "A"
+    )
+    
+    ExerciseCardPreview(exercise: exercise)
+}
+
+struct ExerciseCardPreview: View {
+    let exercise: Exercise
+    @State private var session = WorkoutSession(
+        date: Date(),
+        planName: "תוכנית A",
+        exerciseSessions: []
+    )
+    
+    var body: some View {
+        ExerciseCard(
+            exercise: exercise,
+            session: $session,
+            lastDefaults: (reps: 8, weight: 60.0, rpe: 8.0),
+            weightUnit: .kg,
+            weightStep: 2.5,
+            onAddSet: {}
+        )
+        .padding()
+    }
+}
+
+#Preview("CompactSetRow") {
+    CompactSetRow(
+        setIndex: 0,
+        setLog: .constant(SetLog(reps: 8, weight: 60.0, rpe: 8.0)),
+        weightUnit: .kg,
+        weightStep: 2.5,
+        onDuplicate: {},
+        onDelete: {}
+    )
+    .padding()
+}
+
+#Preview("ActionChip") {
+    VStack(spacing: 12) {
+        ActionChip(title: "שכפל סט", action: {})
+        ActionChip(title: "סט חימום", action: {})
+        ActionChip(title: "נקה הכל", action: {})
+    }
+    .padding()
 }
