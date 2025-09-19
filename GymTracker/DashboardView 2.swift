@@ -71,7 +71,8 @@ struct DashboardView: View {
                 },
                 onCancel: {
                     showWorkoutSelection = false
-                }
+                },
+                getNextWorkout: getNextWorkout
             )
         }
     }
@@ -696,6 +697,7 @@ struct WorkoutSelectionSheet: View {
     let plans: [WorkoutPlan]
     let onSelect: (NextWorkout) -> Void
     let onCancel: () -> Void
+    let getNextWorkout: () -> NextWorkout?
     
     @Environment(\.dismiss) private var dismiss
     
@@ -714,6 +716,43 @@ struct WorkoutSelectionSheet: View {
                         .multilineTextAlignment(.center)
                 }
                 .padding(.top, AppTheme.s16)
+                
+                // Next workout button
+                if let nextWorkout = getNextWorkout() {
+                    Button(action: {
+                        onSelect(nextWorkout)
+                    }) {
+                        HStack {
+                            Image(systemName: "play.circle.fill")
+                                .font(.title2)
+                            
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("המשך עם האימון הבא")
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                
+                                Text("\(nextWorkout.plan.name) - אימון \(nextWorkout.label)")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            
+                            Spacer()
+                            
+                            Text("\(nextWorkout.exercises.count) תרגילים")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            
+                            Image(systemName: "chevron.forward")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(AppTheme.s16)
+                        .background(AppTheme.accent.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, AppTheme.s16)
+                }
                 
                 // Plans list
                 ScrollView {
