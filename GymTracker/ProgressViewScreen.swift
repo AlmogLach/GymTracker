@@ -130,11 +130,11 @@ struct ProgressViewScreen: View {
                 
                 MetricCard(
                     title: "סטים השבוע",
-                    value: String(format: "%.0f %@", totalVolumeThisWeek, unit.symbol),
-                    subtitle: "עלייה של \(volumeIncrease)%",
+                    value: "\(totalSetsThisWeek)",
+                    subtitle: "עלייה של \(Int(setsIncrease))%",
                     icon: "chart.bar.fill",
                     color: .green,
-                    progress: min(1.0, volumeIncrease / 100)
+                    progress: min(1.0, setsIncrease / 100)
                 )
                 
                 MetricCard(
@@ -306,7 +306,7 @@ struct ProgressViewScreen: View {
                 WeekComparisonCard(
                     title: "השבוע",
                     workouts: thisWeekSessions,
-                    volume: totalVolumeThisWeek,
+                    sets: totalSetsThisWeek,
                     unit: unit.symbol,
                     isCurrent: true
                 )
@@ -314,7 +314,7 @@ struct ProgressViewScreen: View {
                 WeekComparisonCard(
                     title: "השבוע שעבר",
                     workouts: lastWeekSessions,
-                    volume: totalVolumeLastWeek,
+                    sets: totalSetsLastWeek,
                     unit: unit.symbol,
                     isCurrent: false
                 )
@@ -340,41 +340,33 @@ struct ProgressViewScreen: View {
         }.count
     }
     
-    private var totalVolumeThisWeek: Double {
+    private var totalSetsThisWeek: Int {
         let calendar = Calendar.current
         let thisWeekSessions = sessions.filter { session in
             calendar.dateInterval(of: .weekOfYear, for: session.date) == calendar.dateInterval(of: .weekOfYear, for: Date())
         }
 
-        let totalKg = thisWeekSessions.reduce(0.0) { total, session in
-            let sessionVolume = session.exerciseSessions.reduce(0.0) { sessionTotal, exerciseSession in
-                let exerciseVolume = exerciseSession.setLogs.reduce(0.0) { setTotal, setLog in
-                    setTotal + (Double(setLog.reps) * setLog.weight)
-                }
-                return sessionTotal + exerciseVolume
+        return thisWeekSessions.reduce(0) { total, session in
+            let sessionSets = session.exerciseSessions.reduce(0) { sessionTotal, exerciseSession in
+                return sessionTotal + exerciseSession.setLogs.count
             }
-            return total + sessionVolume
+            return total + sessionSets
         }
-        return unit.toDisplay(fromKg: totalKg)
     }
     
-    private var totalVolumeLastWeek: Double {
+    private var totalSetsLastWeek: Int {
         let calendar = Calendar.current
         let lastWeek = calendar.date(byAdding: .weekOfYear, value: -1, to: Date()) ?? Date()
         let lastWeekSessions = sessions.filter { session in
             calendar.dateInterval(of: .weekOfYear, for: session.date) == calendar.dateInterval(of: .weekOfYear, for: lastWeek)
         }
 
-        let totalKg = lastWeekSessions.reduce(0.0) { total, session in
-            let sessionVolume = session.exerciseSessions.reduce(0.0) { sessionTotal, exerciseSession in
-                let exerciseVolume = exerciseSession.setLogs.reduce(0.0) { setTotal, setLog in
-                    setTotal + (Double(setLog.reps) * setLog.weight)
-                }
-                return sessionTotal + exerciseVolume
+        return lastWeekSessions.reduce(0) { total, session in
+            let sessionSets = session.exerciseSessions.reduce(0) { sessionTotal, exerciseSession in
+                return sessionTotal + exerciseSession.setLogs.count
             }
-            return total + sessionVolume
+            return total + sessionSets
         }
-        return unit.toDisplay(fromKg: totalKg)
     }
     
     private var averageWorkoutDuration: String {
@@ -414,9 +406,9 @@ struct ProgressViewScreen: View {
     
     private var weeklyGoal: Int { 5 } // Default weekly goal
     
-    private var volumeIncrease: Double {
-        guard totalVolumeLastWeek > 0 else { return 0 }
-        return ((totalVolumeThisWeek - totalVolumeLastWeek) / totalVolumeLastWeek) * 100
+    private var setsIncrease: Double {
+        guard totalSetsLastWeek > 0 else { return 0 }
+        return ((Double(totalSetsThisWeek) - Double(totalSetsLastWeek)) / Double(totalSetsLastWeek)) * 100
     }
     
     private var chartData: [ChartDataPoint] {
@@ -632,7 +624,7 @@ struct AchievementCard: View {
 struct WeekComparisonCard: View {
     let title: String
     let workouts: Int
-    let volume: Double
+    let sets: Int
     let unit: String
     let isCurrent: Bool
     
@@ -651,7 +643,7 @@ struct WeekComparisonCard: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             
-            Text("\(volume, specifier: "%.0f") \(unit)")
+            Text("\(sets) סטים")
                 .font(.caption)
                 .fontWeight(.medium)
                 .foregroundStyle(.secondary)

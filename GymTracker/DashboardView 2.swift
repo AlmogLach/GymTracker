@@ -146,7 +146,7 @@ struct DashboardView: View {
             )
             
             StatTile(
-                value: totalVolumeThisWeek.formatted(.number.precision(.fractionLength(0))),
+                value: "\(totalSetsThisWeek)",
                 label: unit.symbol,
                 icon: "chart.bar.fill",
                 color: .purple
@@ -328,7 +328,7 @@ struct DashboardView: View {
                         
                         StatItem(
                             icon: "chart.bar.fill",
-                            value: "\(Int(displayVolume(for: lastSession))) \(unit.symbol)",
+                            value: "\(displaySetsCount(for: lastSession))",
                             label: "סטים"
                         )
                     }
@@ -373,23 +373,22 @@ struct DashboardView: View {
         }.count
     }
     
-    private var totalVolumeThisWeek: Double {
+    private var totalSetsThisWeek: Int {
         let calendar = Calendar.current
         let thisWeekSessions = sessions.filter { session in
             calendar.dateInterval(of: .weekOfYear, for: session.date) == calendar.dateInterval(of: .weekOfYear, for: Date())
         }
-        let totalKg = thisWeekSessions.reduce(0.0) { total, session in
-            total + totalVolumeKg(for: session)
+        return thisWeekSessions.reduce(0) { total, session in
+            total + totalSetsCount(for: session)
         }
-        return unit.toDisplay(fromKg: totalKg)
     }
     
-    private func totalVolumeKg(for session: WorkoutSession) -> Double {
-        session.exerciseSessions.flatMap { $0.setLogs }.reduce(0.0) { $0 + (Double($1.reps) * $1.weight) }
+    private func totalSetsCount(for session: WorkoutSession) -> Int {
+        return session.exerciseSessions.flatMap { $0.setLogs }.count
     }
     
-    private func displayVolume(for session: WorkoutSession) -> Double {
-        unit.toDisplay(fromKg: totalVolumeKg(for: session))
+    private func displaySetsCount(for session: WorkoutSession) -> Int {
+        return totalSetsCount(for: session)
     }
     
     private func getNextWorkout() -> NextWorkout? {
@@ -511,7 +510,7 @@ struct DashboardView: View {
                     
                     Spacer()
                     
-                    Text("\(totalVolumeThisWeek.formatted(.number.precision(.fractionLength(0)))) \(unit.symbol)")
+                    Text("\(totalSetsThisWeek)")
                         .font(.title2)
                         .fontWeight(.bold)
                 }
