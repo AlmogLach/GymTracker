@@ -241,7 +241,7 @@ struct SettingRow<Content: View>: View {
             if let action = action {
                 action()
             } else {
-                Image(systemName: "chevron.backward")
+                Image(systemName: "chevron.forward")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.tertiary)
             }

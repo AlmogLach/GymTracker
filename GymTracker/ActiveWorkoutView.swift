@@ -613,7 +613,7 @@ struct ExerciseListItem: View {
                 Spacer()
 
                 if isActive {
-                    Image(systemName: "chevron.backward")
+                    Image(systemName: "chevron.forward")
                         .font(.caption)
                         .foregroundStyle(AppTheme.accent)
                 }

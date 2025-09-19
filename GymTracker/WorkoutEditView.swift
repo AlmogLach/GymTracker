@@ -1331,7 +1331,7 @@ struct CustomTemplateCard: View {
             }
             
             Button(action: onTap) {
-                Image(systemName: "chevron.forward")
+                Image(systemName: "chevron.backward")
                     .font(.caption)
                     .foregroundStyle(AppTheme.accent)
             }
@@ -1516,7 +1516,7 @@ struct NewWorkoutSheet: View {
                 
                 Spacer()
                 
-                                    Image(systemName: "chevron.forward")
+                                    Image(systemName: "chevron.backward")
                                         .font(.caption)
                                         .foregroundStyle(AppTheme.secondary)
                                 }
@@ -1999,7 +1999,7 @@ struct SelectedPlanCard: View {
                 
                 Spacer()
                 
-                Image(systemName: "chevron.forward")
+                Image(systemName: "chevron.backward")
                     .font(.caption)
                     .foregroundStyle(AppTheme.secondary)
             }
@@ -2275,7 +2275,7 @@ struct ExerciseSummaryCard: View {
                     
                     Spacer()
                     
-                    Image(systemName: "chevron.forward")
+                    Image(systemName: "chevron.backward")
                 .font(.caption)
                         .foregroundStyle(AppTheme.secondary)
                 }
