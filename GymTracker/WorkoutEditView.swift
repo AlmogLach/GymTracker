@@ -2373,7 +2373,7 @@ struct ExerciseDetailsSheet: View {
                 
                 StatCard(
                     title: "סטים הושלמו",
-                    value: "\(session.exerciseSessions.reduce(0) { $0 + $1.setLogs.count })",
+                    value: "\(exerciseSession.setLogs.count)",
                     icon: "scalemass",
                     color: AppTheme.success
                 )
@@ -2440,7 +2440,7 @@ struct SetDetailRow: View {
             
             Spacer()
             
-            Text("\(setLog.reps) חזרות")
+            Text("\(reps) חזרות")
                 .font(.caption)
                 .fontWeight(.medium)
                 .foregroundStyle(AppTheme.success)
