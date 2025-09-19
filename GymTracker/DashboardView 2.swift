@@ -329,7 +329,7 @@ struct DashboardView: View {
                         StatItem(
                             icon: "chart.bar.fill",
                             value: "\(Int(displayVolume(for: lastSession))) \(unit.symbol)",
-                            label: "נפח"
+                            label: "סטים"
                         )
                     }
                     
@@ -505,7 +505,7 @@ struct DashboardView: View {
                 }
                 
                 HStack {
-                    Text("נפח כולל")
+                    Text("סטים הושלמו")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     

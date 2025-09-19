@@ -133,7 +133,7 @@ struct ActiveWorkoutView: View {
                 }
 
                 VStack(spacing: AppTheme.s4) {
-                    Text("עריכת אימון")
+                    Text("אימון")
                         .font(.system(size: 22, weight: .bold, design: .rounded))
 
                     Text(workout?.plan.name ?? "")
@@ -613,7 +613,7 @@ struct ExerciseListItem: View {
                 Spacer()
 
                 if isActive {
-                    Image(systemName: "chevron.left")
+                    Image(systemName: "chevron.backward")
                         .font(.caption)
                         .foregroundStyle(AppTheme.accent)
                 }

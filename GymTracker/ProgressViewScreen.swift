@@ -29,7 +29,7 @@ struct ProgressViewScreen: View {
     
     enum ProgressMetric: String, CaseIterable {
         case workouts = "אימונים"
-        case volume = "נפח"
+        case setsCompleted = "סטים הושלמו"
         case duration = "זמן"
         case exercises = "תרגילים"
     }
@@ -115,21 +115,21 @@ struct ProgressViewScreen: View {
                 .font(.headline)
                 .fontWeight(.bold)
             
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
+        LazyVGrid(columns: [
+            GridItem(.flexible()),
+            GridItem(.flexible())
             ], spacing: AppTheme.s12) {
                 MetricCard(
                     title: "אימונים השבוע",
                     value: "\(thisWeekSessions)",
                     subtitle: "מתוך \(weeklyGoal) מטרה",
-                    icon: "figure.strengthtraining.traditional",
+                icon: "figure.strengthtraining.traditional",
                     color: .blue,
                     progress: Double(thisWeekSessions) / Double(weeklyGoal)
                 )
                 
                 MetricCard(
-                    title: "נפח השבוע",
+                    title: "סטים השבוע",
                     value: String(format: "%.0f %@", totalVolumeThisWeek, unit.symbol),
                     subtitle: "עלייה של \(volumeIncrease)%",
                     icon: "chart.bar.fill",
@@ -501,9 +501,9 @@ struct MetricCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: AppTheme.s8) {
             HStack {
-                Image(systemName: icon)
+            Image(systemName: icon)
                     .font(.title2)
-                    .foregroundStyle(color)
+                .foregroundStyle(color)
                 
                 Spacer()
                 
@@ -536,8 +536,8 @@ struct CircularProgressView: View {
     let color: Color
     
     var body: some View {
-        ZStack {
-            Circle()
+            ZStack {
+                Circle()
                 .stroke(color.opacity(0.2), lineWidth: 3)
             
             Circle()
@@ -587,7 +587,7 @@ struct ExerciseProgressRow: View {
                     Image(systemName: "arrow.up")
                         .font(.caption2)
                     Text("+\(improvement, specifier: "%.0f")%")
-                        .font(.caption)
+                .font(.caption)
                         .fontWeight(.medium)
                 }
                 .foregroundStyle(.green)
@@ -703,11 +703,11 @@ struct GoalSettingSheet: View {
                     }
                     
                     VStack(alignment: .leading, spacing: AppTheme.s8) {
-                        Text("יעד נפח")
+                        Text("יעד סטים")
                             .font(.headline)
                         
                         HStack {
-                            TextField("נפח", value: $volumeGoal, format: .number)
+                            TextField("סטים", value: $volumeGoal, format: .number)
                                 .textFieldStyle(.roundedBorder)
                             Text("ק״ג")
                                 .foregroundStyle(.secondary)

@@ -145,6 +145,7 @@ struct WorkoutEditView: View {
                         .foregroundStyle(.secondary)
                     
                     TextField("חפש אימונים...", text: $searchText)
+                        .multilineTextAlignment(.trailing)
                         .textFieldStyle(.plain)
                     
                     if !searchText.isEmpty {
@@ -163,6 +164,7 @@ struct WorkoutEditView: View {
                         .foregroundStyle(.secondary)
                     
                     TextField("חפש תבניות...", text: $templateSearchText)
+                        .multilineTextAlignment(.trailing)
                         .textFieldStyle(.plain)
                     
                     if !templateSearchText.isEmpty {
@@ -1329,7 +1331,7 @@ struct CustomTemplateCard: View {
             }
             
             Button(action: onTap) {
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.caption)
                     .foregroundStyle(AppTheme.accent)
             }
@@ -1514,7 +1516,7 @@ struct NewWorkoutSheet: View {
                 
                 Spacer()
                 
-                                    Image(systemName: "chevron.right")
+                                    Image(systemName: "chevron.forward")
                                         .font(.caption)
                                         .foregroundStyle(AppTheme.secondary)
                                 }
@@ -1556,6 +1558,7 @@ struct NewWorkoutSheet: View {
                                         .foregroundStyle(AppTheme.primary)
                                     
                                     TextField("הוסף הערות לאימון...", text: $notes, axis: .vertical)
+                                    .multilineTextAlignment(.trailing)
                                         .textFieldStyle(.roundedBorder)
                                         .lineLimit(3...6)
                                 }
@@ -1752,6 +1755,7 @@ struct WorkoutSessionEditSheet: View {
                                     .foregroundStyle(AppTheme.primary)
                                 
                                 TextField("הוסף הערות לאימון...", text: $notes, axis: .vertical)
+                                    .multilineTextAlignment(.trailing)
                                     .lineLimit(3...6)
                                     .padding(AppTheme.s12)
                                     .background(AppTheme.cardBG)
@@ -1995,7 +1999,7 @@ struct SelectedPlanCard: View {
                 
                 Spacer()
                 
-                Image(systemName: "chevron.right")
+                Image(systemName: "chevron.forward")
                     .font(.caption)
                     .foregroundStyle(AppTheme.secondary)
             }
@@ -2135,6 +2139,7 @@ struct CreateTemplateSheet: View {
                                     .foregroundStyle(AppTheme.primary)
                                 
                                 TextField("שם התבנית...", text: $templateName)
+                                    .multilineTextAlignment(.trailing)
                                     .textFieldStyle(.roundedBorder)
                                     .font(.headline)
                             }
@@ -2147,6 +2152,7 @@ struct CreateTemplateSheet: View {
                                     .foregroundStyle(AppTheme.primary)
                                 
                                 TextField("תיאור התבנית...", text: $templateDescription, axis: .vertical)
+                                    .multilineTextAlignment(.trailing)
                                     .textFieldStyle(.roundedBorder)
                                     .lineLimit(2...4)
                             }
@@ -2269,7 +2275,7 @@ struct ExerciseSummaryCard: View {
                     
                     Spacer()
                     
-                    Image(systemName: "chevron.right")
+                    Image(systemName: "chevron.forward")
                 .font(.caption)
                         .foregroundStyle(AppTheme.secondary)
                 }
@@ -2277,7 +2283,7 @@ struct ExerciseSummaryCard: View {
                 HStack {
                     Label("\(exerciseSession.setLogs.count)", systemImage: "list.number")
                     Spacer()
-                    Label("\(Int(exerciseSession.setLogs.reduce(0) { $0 + $1.weight })) ק״ג", systemImage: "scalemass")
+                    Label("\(exerciseSession.setLogs.count) סטים", systemImage: "checkmark.circle")
                 }
                 .font(.caption2)
                 .foregroundStyle(AppTheme.secondary)
@@ -2366,8 +2372,8 @@ struct ExerciseDetailsSheet: View {
                 )
                 
                 StatCard(
-                    title: "נפח",
-                    value: "\(Int(totalVolume)) ק״ג",
+                    title: "סטים הושלמו",
+                    value: "\(session.exerciseSessions.reduce(0) { $0 + $1.setLogs.count })",
                     icon: "scalemass",
                     color: AppTheme.success
                 )
@@ -2434,7 +2440,7 @@ struct SetDetailRow: View {
             
             Spacer()
             
-            Text("\(setVolume) ק״ג")
+            Text("\(setLog.reps) חזרות")
                 .font(.caption)
                 .fontWeight(.medium)
                 .foregroundStyle(AppTheme.success)

@@ -195,6 +195,223 @@ struct DayChip: View {
     }
 }
 
+struct ExerciseEditRow: View {
+    let exercise: Exercise
+    let index: Int
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    let onMoveUp: (() -> Void)?
+    let onMoveDown: (() -> Void)?
+    
+    var body: some View {
+        HStack(spacing: AppTheme.s12) {
+            // Move buttons
+            VStack(spacing: 4) {
+                if let onMoveUp = onMoveUp {
+                    Button(action: onMoveUp) {
+                        Image(systemName: "chevron.up")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
+                
+                if let onMoveDown = onMoveDown {
+                    Button(action: onMoveDown) {
+                        Image(systemName: "chevron.down")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.accent)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(width: 24)
+            
+            // Exercise info
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(exercise.name)
+                        .font(.headline)
+                        .fontWeight(.medium)
+                    
+                    Spacer()
+                    
+                    if let label = exercise.label, !label.isEmpty {
+                        PillBadge(text: label, icon: "tag")
+                    }
+                }
+                
+                HStack(spacing: AppTheme.s12) {
+                    if let reps = exercise.plannedReps {
+                        Text("\(exercise.plannedSets) × \(reps)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("\(exercise.plannedSets) סטים")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    
+                    if let muscleGroup = exercise.muscleGroup {
+                        Text(muscleGroup)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            
+            Spacer()
+            
+            // Action buttons
+            HStack(spacing: AppTheme.s8) {
+                Button("ערוך") {
+                    onEdit()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                
+                Button("מחק") {
+                    onDelete()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .foregroundStyle(.red)
+            }
+        }
+        .padding(AppTheme.s16)
+        .background(Color(.tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
+    }
+}
+
+
+struct EditExerciseSheet: View {
+    let exercise: Exercise
+    let onSave: (Exercise) -> Void
+    @Environment(\.dismiss) private var dismiss
+    
+    @State private var exerciseName: String
+    @State private var plannedSets: Int
+    @State private var plannedReps: Int?
+    @State private var notes: String
+    @State private var label: String
+    @State private var muscleGroup: String
+    @State private var equipment: String
+    @State private var isBodyweight: Bool
+    
+    init(exercise: Exercise, onSave: @escaping (Exercise) -> Void) {
+        self.exercise = exercise
+        self.onSave = onSave
+        self._exerciseName = State(initialValue: exercise.name)
+        self._plannedSets = State(initialValue: exercise.plannedSets)
+        self._plannedReps = State(initialValue: exercise.plannedReps)
+        self._notes = State(initialValue: exercise.notes ?? "")
+        self._label = State(initialValue: exercise.label ?? "")
+        self._muscleGroup = State(initialValue: exercise.muscleGroup ?? "")
+        self._equipment = State(initialValue: exercise.equipment ?? "")
+        self._isBodyweight = State(initialValue: exercise.isBodyweight ?? false)
+    }
+    
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: AppTheme.s24) {
+                    // Exercise details
+                    VStack(alignment: .leading, spacing: AppTheme.s16) {
+                        Text("פרטי התרגיל")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                        
+                        VStack(spacing: AppTheme.s16) {
+                            // Exercise name
+                            VStack(alignment: .leading, spacing: AppTheme.s8) {
+                                Text("שם התרגיל")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                
+                                TextField("שם התרגיל...", text: $exerciseName)
+                                    .multilineTextAlignment(.trailing)
+                                    .textFieldStyle(.roundedBorder)
+                            }
+                            
+                            // Sets and reps
+                            HStack(spacing: AppTheme.s16) {
+                                VStack(alignment: .leading, spacing: AppTheme.s8) {
+                                    Text("סטים")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    
+                                    Stepper("\(plannedSets)", value: $plannedSets, in: 1...10)
+                                        .labelsHidden()
+                                }
+                                
+                                VStack(alignment: .leading, spacing: AppTheme.s8) {
+                                    Text("חזרות")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                    
+                                    TextField("8", value: $plannedReps, format: .number)
+                                        .textFieldStyle(.roundedBorder)
+                                        .keyboardType(.numberPad)
+                                }
+                            }
+                            
+                            // Additional info
+                            VStack(alignment: .leading, spacing: AppTheme.s8) {
+                                Text("מידע נוסף")
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                
+                                TextField("קבוצת שריר...", text: $muscleGroup)
+                                    .multilineTextAlignment(.trailing)
+                                    .textFieldStyle(.roundedBorder)
+                                
+                                TextField("ציוד...", text: $equipment)
+                                    .multilineTextAlignment(.trailing)
+                                    .textFieldStyle(.roundedBorder)
+                                
+                                TextField("הערות...", text: $notes, axis: .vertical)
+                                    .multilineTextAlignment(.trailing)
+                                    .textFieldStyle(.roundedBorder)
+                                    .lineLimit(3...6)
+                            }
+                        }
+                    }
+                }
+                .padding(AppTheme.s24)
+            }
+            .navigationTitle("עריכת תרגיל")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("ביטול") { dismiss() }
+                }
+                
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("שמור") {
+                        saveExercise()
+                    }
+                    .disabled(exerciseName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+        }
+    }
+    
+    private func saveExercise() {
+        exercise.name = exerciseName.trimmingCharacters(in: .whitespacesAndNewlines)
+        exercise.plannedSets = plannedSets
+        exercise.plannedReps = plannedReps
+        exercise.notes = notes.isEmpty ? nil : notes
+        exercise.label = label.isEmpty ? nil : label
+        exercise.muscleGroup = muscleGroup.isEmpty ? nil : muscleGroup
+        exercise.equipment = equipment.isEmpty ? nil : equipment
+        exercise.isBodyweight = isBodyweight
+        
+        onSave(exercise)
+        dismiss()
+    }
+}
+
 // MARK: - Previews
 
 #Preview("PillBadge") {

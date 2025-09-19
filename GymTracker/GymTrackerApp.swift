@@ -65,7 +65,17 @@ struct GymTrackerApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(\.layoutDirection, .rightToLeft)
                 .onAppear {
+                    UIView.appearance().semanticContentAttribute = .forceRightToLeft
+                    UILabel.appearance().semanticContentAttribute = .forceRightToLeft
+                    UINavigationBar.appearance().semanticContentAttribute = .forceRightToLeft
+                    UITabBar.appearance().semanticContentAttribute = .forceRightToLeft
+                    UITableView.appearance().semanticContentAttribute = .forceRightToLeft
+                    UICollectionView.appearance().semanticContentAttribute = .forceRightToLeft
+                    UIScrollView.appearance().semanticContentAttribute = .forceRightToLeft
+                    UITextField.appearance().textAlignment = .right
+                    UITextView.appearance().textAlignment = .right
                     let context = sharedModelContainer.mainContext
 
                     // Fix any orphaned exercises and ensure proper relationships

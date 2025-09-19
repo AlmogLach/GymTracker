@@ -200,6 +200,7 @@ struct SearchBar: View {
             Image(systemName: "magnifyingglass")
                 .foregroundStyle(.secondary)
             TextField("חיפוש תוכניות...", text: $searchText)
+                .multilineTextAlignment(.trailing)
                 .textFieldStyle(.plain)
             if !searchText.isEmpty {
                 Button("נקה") {
@@ -689,6 +690,7 @@ struct EditPlanSheet: View {
                     .foregroundStyle(.primary)
 
                 TextField("שם התוכנית", text: $planName)
+                    .multilineTextAlignment(.trailing)
                     .font(.system(size: 16))
                     .padding(AppTheme.s16)
                     .background(AppTheme.cardBG)
@@ -1310,6 +1312,7 @@ struct ExerciseLibrarySheet: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
                 TextField("חיפוש תרגילים...", text: $searchText)
+                    .multilineTextAlignment(.trailing)
                     .textFieldStyle(.plain)
                 if !searchText.isEmpty {
                     Button("נקה") { searchText = "" }

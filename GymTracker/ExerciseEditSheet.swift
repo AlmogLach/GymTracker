@@ -74,6 +74,7 @@ struct ExerciseEditSheet: View {
                         .textCase(.uppercase)
                     
                     TextField("שם התרגיל", text: $exercise.name)
+                        .multilineTextAlignment(.trailing)
                         .font(.system(size: 24, weight: .bold, design: .rounded))
                         .textFieldStyle(.plain)
                 }

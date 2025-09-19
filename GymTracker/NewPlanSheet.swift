@@ -113,6 +113,7 @@ struct NewPlanSheet: View {
                         .foregroundStyle(.primary)
                     
                     TextField("לדוגמה: תוכנית כוח עליון", text: $name)
+                        .multilineTextAlignment(.trailing)
                         .font(.system(size: 16))
                         .padding(16)
                         .background(Color(.secondarySystemGroupedBackground))
