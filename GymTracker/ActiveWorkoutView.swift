@@ -313,7 +313,7 @@ struct ActiveWorkoutView: View {
                         Text("תרגיל הבא")
                             .font(.caption)
                             .fontWeight(.semibold)
-                        Image(systemName: "chevron.backward")
+                        Image(systemName: "chevron.forward")
                             .font(.caption)
                     }
                     .foregroundStyle(AppTheme.accent)
