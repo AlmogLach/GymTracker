@@ -16,6 +16,8 @@ struct DashboardView: View {
     @Query private var settingsList: [AppSettings]
     @State private var showNewPlanSheet = false
     @State private var showActiveWorkout = false
+    @State private var showWorkoutSelection = false
+    @State private var selectedWorkout: NextWorkout?
 
     var body: some View {
         NavigationStack {
@@ -52,9 +54,23 @@ struct DashboardView: View {
         }
         .fullScreenCover(isPresented: $showActiveWorkout) {
             ActiveWorkoutView(
-                workout: getNextWorkout(),
+                workout: selectedWorkout ?? getNextWorkout(),
                 onComplete: {
                     showActiveWorkout = false
+                    selectedWorkout = nil
+                }
+            )
+        }
+        .sheet(isPresented: $showWorkoutSelection) {
+            WorkoutSelectionSheet(
+                plans: plans,
+                onSelect: { workout in
+                    selectedWorkout = workout
+                    showWorkoutSelection = false
+                    showActiveWorkout = true
+                },
+                onCancel: {
+                    showWorkoutSelection = false
                 }
             )
         }
@@ -222,7 +238,7 @@ struct DashboardView: View {
                     }
                     
                     Button(action: {
-                        showActiveWorkout = true
+                        showWorkoutSelection = true
                     }) {
                         HStack {
                             Image(systemName: "play.circle.fill")
@@ -258,7 +274,7 @@ struct DashboardView: View {
                         .frame(maxWidth: .infinity)
                         
                         Button("התחל אימון") {
-                            showActiveWorkout = true
+                            showWorkoutSelection = true
                         }
                         .buttonStyle(.borderedProminent)
                         .frame(maxWidth: .infinity)
@@ -353,7 +369,7 @@ struct DashboardView: View {
                     message: "התחל אימון כדי להתחיל.",
                     buttonTitle: "התחל אימון"
                 ) {
-                    showActiveWorkout = true
+                    showWorkoutSelection = true
                 }
             }
         }
@@ -559,7 +575,7 @@ struct DashboardView: View {
                     icon: "play.circle.fill",
                     color: .green
                 ) {
-                    showActiveWorkout = true
+                    showWorkoutSelection = true
                 }
                 
                 QuickActionTile(
@@ -675,6 +691,124 @@ struct QuickActionTile: View {
     }
 }
 
+
+struct WorkoutSelectionSheet: View {
+    let plans: [WorkoutPlan]
+    let onSelect: (NextWorkout) -> Void
+    let onCancel: () -> Void
+    
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: AppTheme.s16) {
+                // Header
+                VStack(spacing: AppTheme.s8) {
+                    Text("בחר אימון")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                    
+                    Text("בחר אימון ספציפי או המשך עם האימון הבא")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, AppTheme.s16)
+                
+                // Plans list
+                ScrollView {
+                    LazyVStack(spacing: AppTheme.s12) {
+                        ForEach(plans, id: \.id) { plan in
+                            PlanWorkoutCard(
+                                plan: plan,
+                                onSelectWorkout: { workout in
+                                    onSelect(workout)
+                                }
+                            )
+                        }
+                    }
+                    .padding(.horizontal, AppTheme.s16)
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("ביטול") {
+                        onCancel()
+                    }
+                }
+            }
+        }
+    }
+}
+
+struct PlanWorkoutCard: View {
+    let plan: WorkoutPlan
+    let onSelectWorkout: (NextWorkout) -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.s12) {
+            // Plan header
+            HStack {
+                VStack(alignment: .leading, spacing: AppTheme.s4) {
+                    Text(plan.name)
+                        .font(.headline)
+                        .fontWeight(.bold)
+                    
+                    Text(plan.planType.rawValue)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+                
+                Text("\(plan.exercises.count) תרגילים")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            
+            // Workout options
+            VStack(spacing: AppTheme.s8) {
+                ForEach(plan.planType.workoutLabels, id: \.self) { label in
+                    Button(action: {
+                        let workout = NextWorkout(
+                            plan: plan,
+                            label: label,
+                            exercises: plan.exercises.filter { $0.label == label || plan.planType == .fullBody },
+                            day: label
+                        )
+                        onSelectWorkout(workout)
+                    }) {
+                        HStack {
+                            Text("אימון \(label)")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            
+                            Spacer()
+                            
+                            Text("\(plan.exercises.filter { $0.label == label || plan.planType == .fullBody }.count) תרגילים")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            
+                            Image(systemName: "chevron.forward")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.vertical, AppTheme.s8)
+                        .padding(.horizontal, AppTheme.s12)
+                        .background(AppTheme.screenBG)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(AppTheme.s16)
+        .background(AppTheme.cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+}
 
 #Preview {
     DashboardView(onNavigateToHistory: {})
