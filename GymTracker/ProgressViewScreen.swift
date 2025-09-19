@@ -442,8 +442,8 @@ struct ProgressViewScreen: View {
             switch selectedMetric {
             case .workouts:
                 value = 1
-            case .volume:
-                value = session.exerciseSessions.flatMap { $0.setLogs }.reduce(0.0) { $0 + (Double($1.reps) * $1.weight) }
+            case .setsCompleted:
+                value = Double(session.exerciseSessions.flatMap { $0.setLogs }.count)
             case .duration:
                 value = Double(session.durationSeconds ?? 0) / 60 // Convert to minutes
             case .exercises:
