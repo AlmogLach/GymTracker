@@ -1030,16 +1030,160 @@ struct WorkoutEditView: View {
 }
 
 // MARK: - Supporting Views and Models
-// Note: Supporting views have been moved to separate files:
-// - WorkoutTemplates.swift
-// - WorkoutSessions.swift  
-// - WorkoutAnalytics.swift
-// - WorkoutHelpers.swift
 
-#Preview {
-    WorkoutEditView()
-        .modelContainer(for: [WorkoutPlan.self, Exercise.self, WorkoutSession.self, ExerciseSession.self, SetLog.self, AppSettings.self], inMemory: true)
+struct WorkoutTemplate: Identifiable {
+    let id = UUID()
+    let name: String
+    let description: String
+    let exercises: Int
+    let duration: String
+    let category: WorkoutEditView.TemplateCategory
+    let difficulty: Difficulty
+    let isFeatured: Bool
+    
+    enum Difficulty: String, CaseIterable {
+        case beginner = "מתחיל"
+        case intermediate = "בינוני"
+        case advanced = "מתקדם"
+        
+        var color: Color {
+            switch self {
+            case .beginner: return AppTheme.success
+            case .intermediate: return AppTheme.warning
+            case .advanced: return AppTheme.error
+            }
+        }
+    }
 }
+
+struct WorkoutSessionCard: View {
+    let session: WorkoutSession
+    let onEdit: () -> Void
+    let onDuplicate: () -> Void
+    let onDelete: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.s12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(session.workoutLabel ?? session.planName ?? "אימון ללא שם")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                    
+                        Text(session.date, style: .date)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+                
+                // Status indicator
+                Circle()
+                    .fill(session.isCompleted == true ? .green : .orange)
+                    .frame(width: 12, height: 12)
+            }
+            
+            // Session details
+            HStack(spacing: AppTheme.s16) {
+                DetailItem(
+                                    title: "תרגילים",
+                                    value: "\(session.exerciseSessions.count)",
+                    icon: "dumbbell"
+                )
+                
+                DetailItem(
+                    title: "זמן",
+                    value: formatDuration(session.durationSeconds),
+                    icon: "clock"
+                )
+                
+                DetailItem(
+                                    title: "סטים",
+                    value: "\(totalSets)",
+                    icon: "list.number"
+                )
+            }
+            
+            // Actions
+            HStack(spacing: AppTheme.s12) {
+                Button("ערוך", action: onEdit)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                
+                Button("שכפל", action: onDuplicate)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                
+                Spacer()
+                
+                Button("מחק", action: onDelete)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .foregroundStyle(.red)
+            }
+        }
+        .padding(AppTheme.s16)
+        .background(AppTheme.secondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
+    }
+    
+    private var totalSets: Int {
+        session.exerciseSessions.reduce(0) { $0 + $1.setLogs.count }
+    }
+    
+    private func formatDuration(_ seconds: Int?) -> String {
+        guard let seconds = seconds else { return "לא ידוע" }
+        let minutes = seconds / 60
+        return "\(minutes) דק׳"
+    }
+}
+
+struct DetailItem: View {
+    let title: String
+    let value: String
+    let icon: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                                .font(.caption)
+                .foregroundStyle(.secondary)
+            
+            Text(value)
+                .font(.caption)
+                .fontWeight(.medium)
+            
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct TemplateCategoryCard: View {
+    let title: String
+    let description: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: AppTheme.s8) {
+            Image(systemName: icon)
+                        .font(.title2)
+                .foregroundStyle(color)
+            
+            Text(title)
+                .font(.subheadline)
+                                .fontWeight(.bold)
+                            
+            Text(description)
+                .font(.caption)
+                        .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(AppTheme.s16)
         .background(AppTheme.secondaryBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
     }
