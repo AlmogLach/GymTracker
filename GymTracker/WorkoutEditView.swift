@@ -1004,6 +1004,7 @@ struct WorkoutSessionEditSheet: View {
     @State private var showDeleteConfirmation = false
     @State private var showExerciseDetails = false
     @State private var selectedExercise: ExerciseSession?
+    @State private var showAllExercises = false
     @State private var durationMinutes: Int
     @State private var durationSeconds: Int
     
@@ -1415,7 +1416,7 @@ struct WorkoutSessionEditSheet: View {
 
                             Spacer()
 
-                            Button(action: { showExerciseDetails = true }) {
+                            Button(action: { showAllExercises = true }) {
                                 HStack(spacing: 4) {
                                     Text("הצג הכל")
                                         .font(.caption)
@@ -1606,7 +1607,14 @@ struct WorkoutSessionEditSheet: View {
         .sheet(isPresented: $showExerciseDetails) {
             if let exercise = selectedExercise {
                 ExerciseDetailsSheet(exerciseSession: exercise)
+                    .onDisappear {
+                        // Clear selection when sheet is dismissed
+                        selectedExercise = nil
+                    }
             }
+        }
+        .sheet(isPresented: $showAllExercises) {
+            AllExercisesSheet(session: session)
         }
     }
 
@@ -1766,7 +1774,7 @@ struct ExerciseSummaryCard: View {
                             .foregroundStyle(AppTheme.accent)
 
                         if maxWeight > 0 {
-                            Text("\(maxWeight, specifier: "%.1f") ק״ג")
+                            Text("\(String(format: "%.1f", maxWeight)) ק״ג")
                                 .font(.caption2)
                                 .fontWeight(.medium)
                                 .foregroundStyle(AppTheme.accent)
@@ -1836,11 +1844,12 @@ struct ExerciseSummaryCard: View {
 struct ExerciseDetailsSheet: View {
     let exerciseSession: ExerciseSession
     @Environment(\.dismiss) private var dismiss
-    
+    @State private var isLoaded = false
+
     private var totalVolume: Double {
         exerciseSession.setLogs.reduce(0) { $0 + ($1.weight * Double($1.reps)) }
     }
-    
+
     private var averageRPE: Double {
         guard !exerciseSession.setLogs.isEmpty else { return 0 }
         let totalRPE = exerciseSession.setLogs.reduce(0.0) { total, setLog in
@@ -1932,7 +1941,7 @@ struct ExerciseDetailsSheet: View {
                 if averageRPE > 0 {
                     StatCard(
                         title: "RPE ממוצע",
-                        value: "\(averageRPE, specifier: "%.1f")",
+                        value: String(format: "%.1f", averageRPE),
                         icon: "chart.bar.fill",
                         color: AppTheme.warning
                     )
@@ -2101,7 +2110,7 @@ struct ExerciseDetailsSheet: View {
 
                 if let bestSet = exerciseSession.setLogs.max(by: { $0.weight < $1.weight }) {
                     VStack(alignment: .leading, spacing: 4) {
-                        Text("\(bestSet.weight, specifier: "%.1f") ק״ג")
+                        Text("\(String(format: "%.1f", bestSet.weight)) ק״ג")
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundStyle(AppTheme.primary)
@@ -2148,7 +2157,7 @@ struct ExerciseDetailsSheet: View {
                             .fontWeight(.bold)
                             .foregroundStyle(AppTheme.primary)
 
-                        Text("\(volumeSet.reps) × \(volumeSet.weight, specifier: "%.1f")")
+                        Text("\(volumeSet.reps) × \(String(format: "%.1f", volumeSet.weight))")
                             .font(.caption)
                             .foregroundStyle(AppTheme.secondary)
                     }
@@ -2277,27 +2286,42 @@ struct ExerciseDetailsSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: AppTheme.s16) {
-                    // Modern header section
-                    headerSection
+            Group {
+                if isLoaded {
+                    ScrollView {
+                        VStack(spacing: AppTheme.s16) {
+                            // Modern header section
+                            headerSection
 
-                    // Quick overview cards
-                    quickOverviewSection
+                            // Quick overview cards
+                            quickOverviewSection
 
-                    // Sets detailed view
-                    setsSection
+                            // Sets detailed view
+                            setsSection
 
-                    // Enhanced statistics
-                    statisticsSection
+                            // Enhanced statistics
+                            statisticsSection
 
-                    // Performance insights
-                    performanceInsightsSection
+                            // Performance insights
+                            performanceInsightsSection
 
-                    Spacer(minLength: 20)
+                            Spacer(minLength: 20)
+                        }
+                        .padding(.horizontal, AppTheme.s16)
+                        .padding(.bottom, AppTheme.s24)
+                    }
+                } else {
+                    // Loading state
+                    VStack(spacing: AppTheme.s16) {
+                        ProgressView()
+                            .scaleEffect(1.2)
+
+                        Text("טוען פרטי תרגיל...")
+                            .font(.subheadline)
+                            .foregroundStyle(AppTheme.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
-                .padding(.horizontal, AppTheme.s16)
-                .padding(.bottom, AppTheme.s24)
             }
             .background(AppTheme.screenBG)
             .navigationTitle("פרטי תרגיל")
@@ -2318,7 +2342,20 @@ struct ExerciseDetailsSheet: View {
                     }
                 }
             }
+            .onAppear {
+                // Small delay to ensure proper state initialization
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        isLoaded = true
+                    }
+                }
+            }
+            .onDisappear {
+                // Reset state when sheet is dismissed
+                isLoaded = false
+            }
         }
+        .id(exerciseSession.exerciseName) // Force view refresh when exercise changes
     }
 }
 
@@ -2372,7 +2409,7 @@ struct SetDetailRow: View {
                         .foregroundStyle(AppTheme.secondary)
                         .padding(.horizontal, 4)
 
-                    Text("\(weight, specifier: "%.1f")")
+                    Text("\(String(format: "%.1f", weight))")
                         .font(.title3)
                         .fontWeight(.bold)
                         .foregroundStyle(AppTheme.primary)
@@ -2404,7 +2441,7 @@ struct SetDetailRow: View {
                             .fill(rpeColor)
                             .frame(width: 6, height: 6)
 
-                        Text("RPE \(rpe, specifier: "%.1f")")
+                        Text("RPE \(String(format: "%.1f", rpe))")
                             .font(.caption)
                             .fontWeight(.medium)
                             .foregroundStyle(rpeColor)
@@ -2454,6 +2491,294 @@ struct RPECategoryCard: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(color.opacity(0.3), lineWidth: 1)
         )
+    }
+}
+
+// MARK: - All Exercises Sheet
+
+struct AllExercisesSheet: View {
+    let session: WorkoutSession
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedExercise: ExerciseSession?
+    @State private var showExerciseDetails = false
+
+    private var totalSets: Int {
+        session.exerciseSessions.reduce(0) { $0 + $1.setLogs.count }
+    }
+
+    private var totalVolume: Double {
+        session.exerciseSessions.reduce(0) { total, exerciseSession in
+            total + exerciseSession.setLogs.reduce(0) { $0 + ($1.weight * Double($1.reps)) }
+        }
+    }
+
+    private var completedExercises: Int {
+        session.exerciseSessions.filter { !$0.setLogs.isEmpty }.count
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: AppTheme.s20) {
+                    // Header Stats
+                    VStack(spacing: AppTheme.s16) {
+                        // Workout info
+                        VStack(spacing: AppTheme.s8) {
+                            Text("כל תרגילי האימון")
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .foregroundStyle(AppTheme.primary)
+
+                            Text(session.date, style: .date)
+                                .font(.subheadline)
+                                .foregroundStyle(AppTheme.secondary)
+                        }
+
+                        // Quick stats
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: AppTheme.s12) {
+                            StatCard(
+                                title: "תרגילים",
+                                value: "\(session.exerciseSessions.count)",
+                                icon: "dumbbell.fill",
+                                color: AppTheme.accent
+                            )
+
+                            StatCard(
+                                title: "הושלמו",
+                                value: "\(completedExercises)",
+                                icon: "checkmark.circle.fill",
+                                color: AppTheme.success
+                            )
+
+                            StatCard(
+                                title: "סה״כ סטים",
+                                value: "\(totalSets)",
+                                icon: "list.number",
+                                color: AppTheme.warning
+                            )
+                        }
+                    }
+                    .padding(AppTheme.s20)
+                    .background(AppTheme.cardBG)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+
+                    // Exercises List
+                    VStack(alignment: .leading, spacing: AppTheme.s16) {
+                        HStack {
+                            Text("רשימת תרגילים")
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .foregroundStyle(AppTheme.primary)
+
+                            Spacer()
+
+                            // Progress indicator
+                            HStack(spacing: 4) {
+                                Text("\(completedExercises)/\(session.exerciseSessions.count)")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+                            .padding(.horizontal, AppTheme.s8)
+                            .padding(.vertical, 4)
+                            .background(AppTheme.accent.opacity(0.1))
+                            .clipShape(Capsule())
+                        }
+
+                        if session.exerciseSessions.isEmpty {
+                            EmptyStateView(
+                                iconSystemName: "dumbbell",
+                                title: "אין תרגילים",
+                                message: "אימון זה עדיין לא מכיל תרגילים",
+                                buttonTitle: nil
+                            ) {}
+                            .padding(.vertical, AppTheme.s24)
+                        } else {
+                            LazyVStack(spacing: AppTheme.s12) {
+                                ForEach(Array(session.exerciseSessions.enumerated()), id: \.offset) { index, exerciseSession in
+                                    WorkoutExerciseRowCard(
+                                        exerciseSession: exerciseSession,
+                                        index: index + 1,
+                                        onTap: {
+                                            selectedExercise = exerciseSession
+                                            showExerciseDetails = true
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                    .padding(AppTheme.s20)
+                    .background(AppTheme.cardBG)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+
+                    Spacer(minLength: 20)
+                }
+                .padding(.horizontal, AppTheme.s16)
+                .padding(.bottom, AppTheme.s24)
+            }
+            .background(AppTheme.screenBG)
+            .navigationTitle("תרגילי האימון")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("סגור") {
+                        dismiss()
+                    }
+                    .foregroundStyle(AppTheme.secondary)
+                }
+            }
+        }
+        .sheet(isPresented: $showExerciseDetails) {
+            if let exercise = selectedExercise {
+                ExerciseDetailsSheet(exerciseSession: exercise)
+                    .onDisappear {
+                        // Clear selection when sheet is dismissed
+                        selectedExercise = nil
+                    }
+            }
+        }
+    }
+}
+
+// MARK: - Exercise Row Card
+
+struct WorkoutExerciseRowCard: View {
+    let exerciseSession: ExerciseSession
+    let index: Int
+    let onTap: () -> Void
+
+    private var totalVolume: Double {
+        exerciseSession.setLogs.reduce(0) { $0 + ($1.weight * Double($1.reps)) }
+    }
+
+    private var maxWeight: Double {
+        exerciseSession.setLogs.map { $0.weight }.max() ?? 0
+    }
+
+    private var averageRPE: Double {
+        guard !exerciseSession.setLogs.isEmpty else { return 0 }
+        let totalRPE = exerciseSession.setLogs.reduce(0.0) { $0 + ($1.rpe ?? 0.0) }
+        return totalRPE / Double(exerciseSession.setLogs.count)
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: AppTheme.s16) {
+                // Exercise number
+                ZStack {
+                    Circle()
+                        .fill(exerciseSession.setLogs.isEmpty ? AppTheme.secondary.opacity(0.1) : AppTheme.accent.opacity(0.1))
+                        .frame(width: 40, height: 40)
+
+                    Text("\(index)")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(exerciseSession.setLogs.isEmpty ? AppTheme.secondary : AppTheme.accent)
+                }
+
+                // Exercise details
+                VStack(alignment: .leading, spacing: AppTheme.s8) {
+                    HStack {
+                        Text(exerciseSession.exerciseName)
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(AppTheme.primary)
+                            .lineLimit(2)
+
+                        Spacer()
+
+                        // Status badge
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(exerciseSession.setLogs.isEmpty ? AppTheme.warning : AppTheme.success)
+                                .frame(width: 8, height: 8)
+
+                            Text(exerciseSession.setLogs.isEmpty ? "לא התחיל" : "הושלם")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(exerciseSession.setLogs.isEmpty ? AppTheme.warning : AppTheme.success)
+                        }
+                    }
+
+                    // Exercise stats
+                    HStack(spacing: AppTheme.s16) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("סטים")
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.secondary)
+
+                            Text("\(exerciseSession.setLogs.count)")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(AppTheme.primary)
+                        }
+
+                        if maxWeight > 0 {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("משקל מקס׳")
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.secondary)
+
+                                Text("\(String(format: "%.1f", maxWeight)) ק״ג")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+                        }
+
+                        if totalVolume > 0 {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("נפח כולל")
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.secondary)
+
+                                Text("\(Int(totalVolume)) ק״ג")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(AppTheme.success)
+                            }
+                        }
+
+                        if averageRPE > 0 {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("RPE ממוצע")
+                                    .font(.caption2)
+                                    .foregroundStyle(AppTheme.secondary)
+
+                                Text("\(String(format: "%.1f", averageRPE))")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(AppTheme.warning)
+                            }
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "chevron.backward")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondary)
+                    }
+                }
+            }
+            .padding(AppTheme.s16)
+            .background(AppTheme.background)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(
+                        exerciseSession.setLogs.isEmpty ? AppTheme.secondary.opacity(0.2) : AppTheme.accent.opacity(0.2),
+                        lineWidth: 1
+                    )
+            )
+        }
+        .buttonStyle(.plain)
     }
 }
 
