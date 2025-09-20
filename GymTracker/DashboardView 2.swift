@@ -58,7 +58,8 @@ struct DashboardView: View {
                 onComplete: {
                     showActiveWorkout = false
                     selectedWorkout = nil
-                }
+                },
+                initialNotes: nil
             )
         }
         .sheet(isPresented: $showWorkoutSelection) {

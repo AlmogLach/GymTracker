@@ -27,6 +27,12 @@ struct WorkoutEditView: View {
     @State private var showCreateTemplate = false
     @State private var templateSearchText = ""
     
+    @State private var notes = ""
+    @State private var showPlanPicker = false
+    @State private var showNewPlanSheet = false
+    @State private var showActiveWorkout = false
+    @State private var nextWorkout: NextWorkout?
+    
     private enum EditSegment: String, CaseIterable {
         case history = "היסטוריה"
         case templates = "תבניות"
@@ -1030,16 +1036,160 @@ struct WorkoutEditView: View {
 }
 
 // MARK: - Supporting Views and Models
-// Note: Supporting views have been moved to separate files:
-// - WorkoutTemplates.swift
-// - WorkoutSessions.swift  
-// - WorkoutAnalytics.swift
-// - WorkoutHelpers.swift
 
-#Preview {
-    WorkoutEditView()
-        .modelContainer(for: [WorkoutPlan.self, Exercise.self, WorkoutSession.self, ExerciseSession.self, SetLog.self, AppSettings.self], inMemory: true)
+struct WorkoutTemplate: Identifiable {
+    let id = UUID()
+    let name: String
+    let description: String
+    let exercises: Int
+    let duration: String
+    let category: WorkoutEditView.TemplateCategory
+    let difficulty: Difficulty
+    let isFeatured: Bool
+    
+    enum Difficulty: String, CaseIterable {
+        case beginner = "מתחיל"
+        case intermediate = "בינוני"
+        case advanced = "מתקדם"
+        
+        var color: Color {
+            switch self {
+            case .beginner: return AppTheme.success
+            case .intermediate: return AppTheme.warning
+            case .advanced: return AppTheme.error
+            }
+        }
+    }
 }
+
+struct WorkoutSessionCard: View {
+    let session: WorkoutSession
+    let onEdit: () -> Void
+    let onDuplicate: () -> Void
+    let onDelete: () -> Void
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: AppTheme.s12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(session.workoutLabel ?? session.planName ?? "אימון ללא שם")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                    
+                        Text(session.date, style: .date)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                }
+                
+                Spacer()
+                
+                // Status indicator
+                Circle()
+                    .fill(session.isCompleted == true ? .green : .orange)
+                    .frame(width: 12, height: 12)
+            }
+            
+            // Session details
+            HStack(spacing: AppTheme.s16) {
+                DetailItem(
+                                    title: "תרגילים",
+                                    value: "\(session.exerciseSessions.count)",
+                    icon: "dumbbell"
+                )
+                
+                DetailItem(
+                    title: "זמן",
+                    value: formatDuration(session.durationSeconds),
+                    icon: "clock"
+                )
+                
+                DetailItem(
+                                    title: "סטים",
+                    value: "\(totalSets)",
+                    icon: "list.number"
+                )
+            }
+            
+            // Actions
+            HStack(spacing: AppTheme.s12) {
+                Button("ערוך", action: onEdit)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                
+                Button("שכפל", action: onDuplicate)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                
+                Spacer()
+                
+                Button("מחק", action: onDelete)
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .foregroundStyle(.red)
+            }
+        }
+        .padding(AppTheme.s16)
+        .background(AppTheme.secondaryBackground)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
+    }
+    
+    private var totalSets: Int {
+        session.exerciseSessions.reduce(0) { $0 + $1.setLogs.count }
+    }
+    
+    private func formatDuration(_ seconds: Int?) -> String {
+        guard let seconds = seconds else { return "לא ידוע" }
+        let minutes = seconds / 60
+        return "\(minutes) דק׳"
+    }
+}
+
+struct DetailItem: View {
+    let title: String
+    let value: String
+    let icon: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                                .font(.caption)
+                .foregroundStyle(.secondary)
+            
+            Text(value)
+                .font(.caption)
+                .fontWeight(.medium)
+            
+            Text(title)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct TemplateCategoryCard: View {
+    let title: String
+    let description: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: AppTheme.s8) {
+            Image(systemName: icon)
+                        .font(.title2)
+                .foregroundStyle(color)
+            
+            Text(title)
+                .font(.subheadline)
+                                .fontWeight(.bold)
+                            
+            Text(description)
+                .font(.caption)
+                        .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(AppTheme.s16)
         .background(AppTheme.secondaryBackground)
         .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
     }
@@ -1332,6 +1482,9 @@ struct NewWorkoutSheet: View {
     @State private var workoutLabel = "A"
     @State private var notes = ""
     @State private var showPlanPicker = false
+    @State private var showNewPlanSheet = false
+    @State private var selectedDate = Date()
+    @State private var createdSession: WorkoutSession?
     
     var body: some View {
         NavigationStack {
@@ -1360,27 +1513,40 @@ struct NewWorkoutSheet: View {
                                 showPlanPicker = true
                             }
                         } else {
-                            Button(action: { showPlanPicker = true }) {
-                                HStack {
-                                    Image(systemName: "plus.circle.fill")
-                    .font(.title2)
-                                        .foregroundStyle(AppTheme.accent)
-                                    
-                                    Text("בחר תוכנית אימון")
-                                        .font(.headline)
-                                        .fontWeight(.medium)
-                
-                Spacer()
-                
-                                    Image(systemName: "chevron.backward")
-                                        .font(.caption)
-                                        .foregroundStyle(AppTheme.secondary)
+                            VStack(spacing: AppTheme.s12) {
+                                Button(action: { showPlanPicker = true }) {
+                                    HStack {
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.title2)
+                                            .foregroundStyle(AppTheme.accent)
+                                        
+                                        Text("בחר תוכנית אימון")
+                                            .font(.headline)
+                                            .fontWeight(.medium)
+                                        
+                                        Spacer()
+                                        
+                                        Image(systemName: "chevron.backward")
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.secondary)
+                                    }
+                                    .padding(AppTheme.s16)
+                                    .background(AppTheme.secondaryBackground)
+                                    .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
                                 }
-                                .padding(AppTheme.s16)
-                                .background(AppTheme.secondaryBackground)
-                                .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
+                                .buttonStyle(.plain)
+                                
+                                if plans.isEmpty {
+                                    EmptyStateView(
+                                        iconSystemName: "list.bullet.rectangle",
+                                        title: "אין תוכניות",
+                                        message: "צור תוכנית חדשה כדי להתחיל",
+                                        buttonTitle: "צור תוכנית"
+                                    ) {
+                                        showNewPlanSheet = true
+                                    }
+                                }
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                     
@@ -1392,18 +1558,50 @@ struct NewWorkoutSheet: View {
                                 .fontWeight(.bold)
                             
                             VStack(spacing: AppTheme.s16) {
-                                // Workout label
+                                // Workout label selection
                                 VStack(alignment: .leading, spacing: AppTheme.s8) {
                                     Text("תגית אימון")
                                         .font(.subheadline)
                                         .fontWeight(.medium)
                                         .foregroundStyle(AppTheme.primary)
                                     
-                                    TextField("A", text: $workoutLabel)
-                                        .textFieldStyle(.roundedBorder)
-                                        .font(.title2)
-                                        .fontWeight(.bold)
-                                        .multilineTextAlignment(.center)
+                                    if let plan = selectedPlan {
+                                        let labels = plan.planType.workoutLabels
+                                        if labels.count > 1 {
+                                            HStack(spacing: AppTheme.s8) {
+                                                ForEach(labels, id: \.self) { label in
+                                                    Button(action: { workoutLabel = label }) {
+                                                        Text(label)
+                                                            .font(.subheadline)
+                                                            .fontWeight(.semibold)
+                                                            .padding(.vertical, AppTheme.s8)
+                                                            .padding(.horizontal, AppTheme.s12)
+                                                            .background(workoutLabel == label ? AppTheme.accent.opacity(0.2) : AppTheme.cardBG)
+                                                            .foregroundStyle(workoutLabel == label ? AppTheme.accent : .primary)
+                                                            .clipShape(Capsule())
+                                                    }
+                                                    .buttonStyle(.plain)
+                                                }
+                                            }
+                                        } else if let only = labels.first {
+                                            Text(only)
+                                                .font(.headline)
+                                                .fontWeight(.bold)
+                                                .foregroundStyle(AppTheme.accent)
+                                        }
+                                    }
+                                }
+
+                                // Date picker
+                                VStack(alignment: .leading, spacing: AppTheme.s8) {
+                                    Text("תאריך האימון")
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundStyle(AppTheme.primary)
+                                    DatePicker("", selection: $selectedDate, displayedComponents: [.date])
+                                        .datePickerStyle(.compact)
+                                        .labelsHidden()
+                                        .frame(maxWidth: .infinity, alignment: .trailing)
                                 }
                                 
                                 // Notes
@@ -1433,8 +1631,8 @@ struct NewWorkoutSheet: View {
                 }
                 
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("התחל אימון") {
-                        startWorkout()
+                    Button("צור אימון") {
+                        createLoggedWorkout()
                     }
                     .disabled(selectedPlan == nil)
                     .buttonStyle(.borderedProminent)
@@ -1444,25 +1642,42 @@ struct NewWorkoutSheet: View {
         .sheet(isPresented: $showPlanPicker) {
             PlanPickerSheet(selectedPlan: $selectedPlan)
         }
+        .sheet(isPresented: $showNewPlanSheet) {
+            NewPlanSheet()
+        }
+        .sheet(item: $createdSession) { session in
+            WorkoutSessionEditSheet(session: session)
+        }
+        .onChange(of: selectedPlan) { _, newValue in
+            guard let plan = newValue else { return }
+            workoutLabel = plan.planType.workoutLabels.first ?? "A"
+        }
     }
     
-    private func startWorkout() {
+    private func createLoggedWorkout() {
         guard let plan = selectedPlan else { return }
-        
-        let newSession = WorkoutSession(
-            date: Date(),
+        let labels = plan.planType.workoutLabels
+        let label = workoutLabel.isEmpty ? (labels.first ?? "A") : workoutLabel
+        let exercisesForLabel: [Exercise] = plan.planType == .fullBody
+            ? plan.exercises
+            : plan.exercises.filter { ($0.label ?? labels.first) == label }
+
+        // Pre-seed exercise sessions with no sets
+        let exerciseSessions = exercisesForLabel.map { ExerciseSession(exerciseName: $0.name, setLogs: []) }
+
+        let session = WorkoutSession(
+            date: selectedDate,
             planName: plan.name,
-            workoutLabel: workoutLabel.isEmpty ? "A" : workoutLabel,
+            workoutLabel: label,
             durationSeconds: nil,
             notes: notes.isEmpty ? nil : notes,
-            isCompleted: false,
-            exerciseSessions: plan.exercises.map { exercise in
-                ExerciseSession(exerciseName: exercise.name, setLogs: [])
-            }
+            isCompleted: true,
+            exerciseSessions: exerciseSessions
         )
-        
-        modelContext.insert(newSession)
-        dismiss()
+        modelContext.insert(session)
+        try? modelContext.save()
+
+        createdSession = session
     }
 }
 

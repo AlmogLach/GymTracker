@@ -10,6 +10,7 @@ import SwiftData
 struct ActiveWorkoutView: View {
     let workout: NextWorkout?
     let onComplete: () -> Void
+    let initialNotes: String?
     
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -502,7 +503,8 @@ struct ActiveWorkoutView: View {
         let session = WorkoutSession(
             date: Date(),
             planName: workout?.plan.name,
-            workoutLabel: workout?.label
+            workoutLabel: workout?.label,
+            notes: initialNotes
         )
 
         modelContext.insert(session)
