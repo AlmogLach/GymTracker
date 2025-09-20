@@ -20,12 +20,6 @@ struct WorkoutEditView: View {
     @State private var selectedFilter: SessionFilter = .all
     @State private var showFilters = false
     
-    // Template-related states
-    @State private var selectedTemplateCategory: TemplateCategory = .all
-    @State private var showTemplateDetail = false
-    @State private var selectedTemplate: WorkoutTemplate?
-    @State private var showCreateTemplate = false
-    @State private var templateSearchText = ""
     
     @State private var notes = ""
     @State private var showPlanPicker = false
@@ -35,13 +29,11 @@ struct WorkoutEditView: View {
     
     private enum EditSegment: String, CaseIterable {
         case history = "היסטוריה"
-        case templates = "תבניות"
         case analytics = "ניתוח"
         
         var icon: String {
             switch self {
             case .history: return "clock.arrow.circlepath"
-            case .templates: return "doc.text"
             case .analytics: return "chart.bar.xaxis"
             }
         }
@@ -55,15 +47,6 @@ struct WorkoutEditView: View {
         case thisMonth = "החודש"
     }
     
-    enum TemplateCategory: String, CaseIterable {
-        case all = "הכל"
-        case strength = "כוח"
-        case hypertrophy = "היפרטרופיה"
-        case endurance = "סיבולת"
-        case bodyweight = "משקל גוף"
-        case cardio = "קרדיו"
-        case flexibility = "גמישות"
-    }
     
     var body: some View {
         NavigationStack {
@@ -78,8 +61,6 @@ struct WorkoutEditView: View {
                 switch selectedSegment {
                 case .history:
                     workoutHistoryView
-                case .templates:
-                    workoutTemplatesView
                 case .analytics:
                     workoutAnalyticsView
                 }
@@ -92,14 +73,6 @@ struct WorkoutEditView: View {
         }
         .sheet(item: $editingSession) { session in
             WorkoutSessionEditSheet(session: session)
-        }
-        .sheet(isPresented: $showTemplateDetail) {
-            if let template = selectedTemplate {
-                TemplateDetailSheet(template: template, onUseTemplate: { useTemplate(template) })
-            }
-        }
-        .sheet(isPresented: $showCreateTemplate) {
-            CreateTemplateSheet()
         }
     }
     
@@ -122,14 +95,6 @@ struct WorkoutEditView: View {
                 Spacer()
                 
                 HStack(spacing: AppTheme.s12) {
-                    if selectedSegment == .templates {
-                        Button(action: { showCreateTemplate = true }) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title2)
-                                .foregroundStyle(AppTheme.accent)
-                        }
-                    }
-                    
                     Button(action: { showFilters = true }) {
                         Image(systemName: "line.3.horizontal.decrease.circle")
                             .font(.title2)
@@ -156,25 +121,6 @@ struct WorkoutEditView: View {
                     
                     if !searchText.isEmpty {
                         Button(action: { searchText = "" }) {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
-                .padding(AppTheme.s12)
-                .background(Color(.tertiarySystemGroupedBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            } else if selectedSegment == .templates {
-                HStack {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(.secondary)
-                    
-                    TextField("חפש תבניות...", text: $templateSearchText)
-                        .multilineTextAlignment(.trailing)
-                        .textFieldStyle(.plain)
-                    
-                    if !templateSearchText.isEmpty {
-                        Button(action: { templateSearchText = "" }) {
                             Image(systemName: "xmark.circle.fill")
                                 .foregroundStyle(.secondary)
                         }
@@ -248,33 +194,6 @@ struct WorkoutEditView: View {
         }
     }
     
-    // MARK: - Workout Templates View
-    
-    private var workoutTemplatesView: some View {
-        ScrollView {
-            VStack(spacing: AppTheme.s16) {
-                // Template stats
-                templateStatsSection
-                
-                // Category filter
-                templateCategoryFilter
-                
-                // Featured templates
-                featuredTemplatesSection
-                
-                // Category-based templates
-                categoryTemplatesSection
-                
-                // Custom templates
-                customTemplatesSection
-                
-                // Quick actions
-                quickActionsSection
-            }
-            .padding(.horizontal, AppTheme.s16)
-            .padding(.bottom, 100)
-        }
-    }
     
     // MARK: - Workout Analytics View
     
@@ -390,258 +309,11 @@ struct WorkoutEditView: View {
         }
     }
     
-    // MARK: - Template Stats Section
     
-    private var templateStatsSection: some View {
-        VStack(spacing: AppTheme.s12) {
-            // Template overview
-            HStack(spacing: AppTheme.s12) {
-                StatCard(
-                    title: "סה״כ תבניות",
-                    value: "\(allTemplates.count)",
-                    icon: "doc.text",
-                    color: AppTheme.accent
-                )
-                
-                StatCard(
-                    title: "קטגוריות",
-                    value: "\(TemplateCategory.allCases.count - 1)",
-                    icon: "folder.fill",
-                    color: AppTheme.success
-                )
-                
-                StatCard(
-                    title: "מותאמות",
-                    value: "\(customTemplates.count)",
-                    icon: "person.fill",
-                    color: AppTheme.warning
-                )
-            }
-            
-            // Template usage stats
-            HStack(spacing: AppTheme.s12) {
-                StatCard(
-                    title: "תבניות מומלצות",
-                    value: "\(featuredTemplates.count)",
-                    icon: "star.fill",
-                    color: AppTheme.info
-                )
-                
-                StatCard(
-                    title: "תבניות קטגוריה",
-                    value: "\(categoryTemplates.count)",
-                    icon: "square.grid.2x2",
-                    color: AppTheme.accent
-                )
-                
-                StatCard(
-                    title: "תבניות ריקות",
-                    value: "\(customTemplates.isEmpty ? "כן" : "לא")",
-                    icon: "exclamationmark.triangle.fill",
-                    color: AppTheme.error
-                )
-            }
-        }
-    }
     
-    // MARK: - Template Category Filter
     
-    private var templateCategoryFilter: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s12) {
-            Text("קטגוריות")
-                .font(.headline)
-                .fontWeight(.bold)
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: AppTheme.s8) {
-                    ForEach(TemplateCategory.allCases, id: \.self) { category in
-                        Button(action: {
-                            selectedTemplateCategory = category
-                        }) {
-                            HStack(spacing: AppTheme.s6) {
-                                Image(systemName: categoryIcon(for: category))
-                                    .font(.caption)
-                                
-                                Text(category.rawValue)
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .padding(.horizontal, AppTheme.s12)
-                            .padding(.vertical, AppTheme.s8)
-                            .background(
-                                selectedTemplateCategory == category ? AppTheme.accent : AppTheme.secondaryBackground,
-                                in: Capsule()
-                            )
-                            .foregroundStyle(selectedTemplateCategory == category ? .white : AppTheme.primary)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, AppTheme.s16)
-            }
-        }
-        .appCard()
-    }
     
-    // MARK: - Featured Templates Section
     
-    private var featuredTemplatesSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s12) {
-            HStack {
-                Text("תבניות מומלצות")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                
-                Spacer()
-                
-                Button("הצג הכל") {
-                    // Show all featured templates
-                }
-                .font(.caption)
-                .foregroundStyle(AppTheme.accent)
-            }
-            
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: AppTheme.s16) {
-                    ForEach(featuredTemplates, id: \.name) { template in
-                        FeaturedTemplateCard(template: template) {
-                            selectedTemplate = template
-                            showTemplateDetail = true
-                        }
-                    }
-                }
-                .padding(.horizontal, AppTheme.s16)
-            }
-        }
-        .appCard()
-    }
-    
-    // MARK: - Category Templates Section
-    
-    private var categoryTemplatesSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s12) {
-            Text("תבניות \(selectedTemplateCategory.rawValue)")
-                .font(.headline)
-                .fontWeight(.bold)
-            
-            if filteredTemplates.isEmpty {
-                EmptyStateView(
-                    iconSystemName: "doc.text.magnifyingglass",
-                    title: "אין תבניות בקטגוריה זו",
-                    message: "נסה קטגוריה אחרת או צור תבנית חדשה",
-                    buttonTitle: "צור תבנית"
-                ) {
-                    showCreateTemplate = true
-                }
-            } else {
-                LazyVGrid(columns: [
-                    GridItem(.flexible()),
-                    GridItem(.flexible())
-                ], spacing: AppTheme.s12) {
-                    ForEach(filteredTemplates, id: \.name) { template in
-                        TemplateGridCard(template: template) {
-                            selectedTemplate = template
-                            showTemplateDetail = true
-                        }
-                    }
-                }
-            }
-        }
-        .appCard()
-    }
-    
-    // MARK: - Custom Templates Section
-    
-    private var customTemplatesSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s12) {
-            HStack {
-                Text("התבניות שלי")
-                    .font(.headline)
-                    .fontWeight(.bold)
-                
-                Spacer()
-                
-                Button(action: { showCreateTemplate = true }) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                        .foregroundStyle(AppTheme.accent)
-                }
-            }
-            
-            if customTemplates.isEmpty {
-                    EmptyStateView(
-                        iconSystemName: "doc.text",
-                    title: "אין תבניות מותאמות",
-                    message: "צור תבנית מותאמת אישית",
-                    buttonTitle: "צור תבנית"
-                ) {
-                    showCreateTemplate = true
-                }
-                } else {
-                LazyVStack(spacing: AppTheme.s12) {
-                    ForEach(customTemplates) { template in
-                        CustomTemplateCard(template: template) {
-                            selectedTemplate = template
-                            showTemplateDetail = true
-                        }
-                    }
-                }
-            }
-        }
-        .appCard()
-    }
-    
-    // MARK: - Quick Actions Section
-    
-    private var quickActionsSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s12) {
-            Text("פעולות מהירות")
-                .font(.headline)
-                .fontWeight(.bold)
-            
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: AppTheme.s12) {
-                QuickActionCard(
-                    title: "צור תבנית",
-                    subtitle: "תבנית חדשה",
-                    icon: "plus.circle.fill",
-                    color: AppTheme.accent
-                ) {
-                    showCreateTemplate = true
-                }
-                
-                QuickActionCard(
-                    title: "ייבא תבנית",
-                    subtitle: "מקובץ או קישור",
-                    icon: "square.and.arrow.down.fill",
-                    color: AppTheme.success
-                ) {
-                    // Import template
-                }
-                
-                QuickActionCard(
-                    title: "תבניות פופולריות",
-                    subtitle: "מהקהילה",
-                    icon: "star.fill",
-                    color: AppTheme.warning
-                ) {
-                    // Show popular templates
-                }
-                
-                QuickActionCard(
-                    title: "הגדרות תבניות",
-                    subtitle: "התאמה אישית",
-                    icon: "gearshape.fill",
-                    color: AppTheme.error
-                ) {
-                    // Template settings
-                }
-            }
-        }
-        .appCard()
-    }
     
     // MARK: - Analytics Overview Section
     
@@ -883,135 +555,8 @@ struct WorkoutEditView: View {
     }
     
     
-    private var allTemplates: [WorkoutTemplate] {
-        featuredTemplates + categoryTemplates + customTemplates
-    }
-    
-    private var featuredTemplates: [WorkoutTemplate] {
-        [
-            WorkoutTemplate(
-                name: "Push/Pull/Legs",
-                description: "תבנית פופולרית לפיתוח שריר",
-                exercises: 12,
-                duration: "60-90 דק׳",
-                category: .hypertrophy,
-                difficulty: .intermediate,
-                isFeatured: true
-            ),
-            WorkoutTemplate(
-                name: "5x5 Stronglifts",
-                description: "תבנית לפיתוח כוח",
-                exercises: 5,
-                duration: "45-60 דק׳",
-                category: .strength,
-                difficulty: .beginner,
-                isFeatured: true
-            ),
-            WorkoutTemplate(
-                name: "Full Body HIIT",
-                description: "אימון אינטנסיבי לכל הגוף",
-                exercises: 8,
-                duration: "30-45 דק׳",
-                category: .cardio,
-                difficulty: .advanced,
-                isFeatured: true
-            )
-        ]
-    }
-    
-    private var categoryTemplates: [WorkoutTemplate] {
-        let templates = [
-            WorkoutTemplate(
-                name: "Upper/Lower Split",
-                description: "תבנית מאוזנת לפיתוח כוח",
-                exercises: 8,
-                duration: "45-60 דק׳",
-                category: .strength,
-                difficulty: .intermediate,
-                isFeatured: false
-            ),
-            WorkoutTemplate(
-                name: "Bodyweight Basics",
-                description: "תרגילי משקל גוף למתחילים",
-                exercises: 6,
-                duration: "30-45 דק׳",
-                category: .bodyweight,
-                difficulty: .beginner,
-                isFeatured: false
-            ),
-            WorkoutTemplate(
-                name: "Muscle Building",
-                description: "תבנית להיפרטרופיה",
-                exercises: 10,
-                duration: "60-75 דק׳",
-                category: .hypertrophy,
-                difficulty: .intermediate,
-                isFeatured: false
-            ),
-            WorkoutTemplate(
-                name: "Cardio Blast",
-                description: "אימון קרדיו אינטנסיבי",
-                exercises: 6,
-                duration: "25-35 דק׳",
-                category: .cardio,
-                difficulty: .advanced,
-                isFeatured: false
-            ),
-            WorkoutTemplate(
-                name: "Flexibility Flow",
-                description: "תרגילי גמישות ויוגה",
-                exercises: 8,
-                duration: "40-50 דק׳",
-                category: .flexibility,
-                difficulty: .beginner,
-                isFeatured: false
-            )
-        ]
-        
-        if selectedTemplateCategory == .all {
-            return templates
-        } else {
-            return templates.filter { $0.category == selectedTemplateCategory }
-        }
-    }
-    
-    private var customTemplates: [WorkoutTemplate] {
-        // Return user's custom templates
-        []
-    }
-    
-    private var filteredTemplates: [WorkoutTemplate] {
-        var templates = categoryTemplates
-        
-        if !templateSearchText.isEmpty {
-            templates = templates.filter { template in
-                template.name.localizedCaseInsensitiveContains(templateSearchText) ||
-                template.description.localizedCaseInsensitiveContains(templateSearchText)
-            }
-        }
-        
-        return templates
-    }
     
     // MARK: - Helper Functions
-    
-    private func categoryIcon(for category: TemplateCategory) -> String {
-        switch category {
-        case .all: return "square.grid.2x2"
-        case .strength: return "dumbbell.fill"
-        case .hypertrophy: return "figure.strengthtraining.traditional"
-        case .endurance: return "heart.fill"
-        case .bodyweight: return "figure.walk"
-        case .cardio: return "heart.circle.fill"
-        case .flexibility: return "figure.yoga"
-        }
-    }
-    
-    private func useTemplate(_ template: WorkoutTemplate) {
-        // Convert template to workout plan and start workout
-        showTemplateDetail = false
-        // Implementation would create a workout from template
-    }
     
     // MARK: - Actions
     
@@ -1036,31 +581,6 @@ struct WorkoutEditView: View {
 }
 
 // MARK: - Supporting Views and Models
-
-struct WorkoutTemplate: Identifiable {
-    let id = UUID()
-    let name: String
-    let description: String
-    let exercises: Int
-    let duration: String
-    let category: WorkoutEditView.TemplateCategory
-    let difficulty: Difficulty
-    let isFeatured: Bool
-    
-    enum Difficulty: String, CaseIterable {
-        case beginner = "מתחיל"
-        case intermediate = "בינוני"
-        case advanced = "מתקדם"
-        
-        var color: Color {
-            switch self {
-            case .beginner: return AppTheme.success
-            case .intermediate: return AppTheme.warning
-            case .advanced: return AppTheme.error
-            }
-        }
-    }
-}
 
 struct WorkoutSessionCard: View {
     let session: WorkoutSession
@@ -1167,219 +687,10 @@ struct DetailItem: View {
     }
 }
 
-struct TemplateCategoryCard: View {
-    let title: String
-    let description: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: AppTheme.s8) {
-            Image(systemName: icon)
-                        .font(.title2)
-                .foregroundStyle(color)
-            
-            Text(title)
-                .font(.subheadline)
-                                .fontWeight(.bold)
-                            
-            Text(description)
-                .font(.caption)
-                        .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(AppTheme.s16)
-        .background(AppTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
-    }
-}
 
-struct FeaturedTemplateCard: View {
-    let template: WorkoutTemplate
-    let onTap: () -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s12) {
-            // Header with badge
-            HStack {
-                Text("מומלץ")
-                    .font(.caption2)
-                    .fontWeight(.bold)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, AppTheme.s8)
-                    .padding(.vertical, AppTheme.s4)
-                    .background(AppTheme.accent)
-                    .clipShape(Capsule())
-                
-                Spacer()
-                
-                Image(systemName: "star.fill")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.warning)
-            }
-            
-            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                Text(template.name)
-                            .font(.headline)
-                            .fontWeight(.bold)
-                    .foregroundStyle(AppTheme.primary)
-                
-                Text(template.description)
-                            .font(.caption)
-                    .foregroundStyle(AppTheme.secondary)
-                    .lineLimit(2)
-                
-                HStack {
-                    Label("\(template.exercises)", systemImage: "dumbbell")
-                    Spacer()
-                    Label(template.duration, systemImage: "clock")
-                }
-                .font(.caption2)
-                .foregroundStyle(AppTheme.secondary)
-            }
-            
-            Spacer()
-            
-            Button("השתמש בתבנית") {
-                onTap()
-            }
-            .font(.caption)
-            .fontWeight(.medium)
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, AppTheme.s8)
-            .background(AppTheme.accent)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-        .padding(AppTheme.s16)
-        .frame(width: 200, height: 180)
-        .background(AppTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
-        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
-    }
-}
 
-struct TemplateGridCard: View {
-    let template: WorkoutTemplate
-    let onTap: () -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s8) {
-            HStack {
-                Text(template.name)
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(AppTheme.primary)
-                
-                Spacer()
-                
-                Circle()
-                    .fill(template.difficulty.color)
-                    .frame(width: 8, height: 8)
-            }
-            
-            Text(template.description)
-                .font(.caption)
-                .foregroundStyle(AppTheme.secondary)
-                .lineLimit(2)
-            
-            HStack {
-                Label("\(template.exercises)", systemImage: "dumbbell")
-                Spacer()
-                Label(template.duration, systemImage: "clock")
-            }
-            .font(.caption2)
-            .foregroundStyle(AppTheme.secondary)
-                
-                    Button("השתמש") {
-                onTap()
-            }
-            .font(.caption)
-            .fontWeight(.medium)
-            .foregroundStyle(AppTheme.accent)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, AppTheme.s6)
-            .background(AppTheme.accent.opacity(0.1))
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-        }
-        .padding(AppTheme.s12)
-        .background(AppTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
-    }
-}
 
-struct CustomTemplateCard: View {
-    let template: WorkoutTemplate
-    let onTap: () -> Void
-    
-    var body: some View {
-        HStack(spacing: AppTheme.s12) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(template.name)
-                    .font(.headline)
-                    .fontWeight(.bold)
-                
-                Text(template.description)
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.secondary)
-                    }
-                    
-                    Spacer()
-            
-            VStack(spacing: 4) {
-                Text("\(template.exercises)")
-                    .font(.caption)
-                    .fontWeight(.medium)
-                Text("תרגילים")
-                    .font(.caption2)
-                    .foregroundStyle(AppTheme.secondary)
-            }
-            
-            Button(action: onTap) {
-                Image(systemName: "chevron.backward")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.accent)
-            }
-        }
-        .padding(AppTheme.s16)
-        .background(AppTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
-    }
-}
 
-struct QuickActionCard: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    let color: Color
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: AppTheme.s8) {
-                Image(systemName: icon)
-                    .font(.title2)
-                    .foregroundStyle(color)
-                
-                Text(title)
-                    .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundStyle(AppTheme.primary)
-                
-                Text(subtitle)
-                    .font(.caption2)
-                    .foregroundStyle(AppTheme.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(AppTheme.s16)
-            .background(AppTheme.secondaryBackground)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
-        }
-        .buttonStyle(.plain)
-    }
-}
 
 struct AnalyticsCard: View {
     let title: String
@@ -1710,127 +1021,437 @@ struct WorkoutSessionEditSheet: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: AppTheme.s24) {
-                    // Header (modern card)
-                    VStack(spacing: AppTheme.s12) {
-                        ZStack {
-                            Circle()
-                                .fill(AppTheme.accent.opacity(0.1))
-                                .frame(width: 80, height: 80)
-                            Text(currentWorkoutLabel)
-                                .font(.system(size: 32, weight: .bold))
-                                .foregroundStyle(AppTheme.accent)
+                VStack(spacing: AppTheme.s16) {
+                    // Modern Header Section
+                    VStack(spacing: AppTheme.s16) {
+                        // Workout label circle and title
+                        VStack(spacing: AppTheme.s12) {
+                            ZStack {
+                                Circle()
+                                    .fill(AppTheme.accent.opacity(0.15))
+                                    .frame(width: 80, height: 80)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(AppTheme.accent.opacity(0.3), lineWidth: 2)
+                                    )
+                                Text(currentWorkoutLabel)
+                                    .font(.system(size: 28, weight: .bold, design: .rounded))
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+
+                            VStack(spacing: 4) {
+                                Text("עריכת אימון")
+                                    .font(.title2)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(AppTheme.primary)
+
+                                HStack(spacing: 8) {
+                                    Image(systemName: "calendar")
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.secondary)
+
+                                    Text(session.date, style: .date)
+                                        .font(.subheadline)
+                                        .foregroundStyle(AppTheme.secondary)
+                                }
+                            }
                         }
-                        Text("עריכת אימון")
-                            .font(.system(size: 22, weight: .bold, design: .rounded))
-                        Text(session.date, style: .date)
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.secondary)
                     }
                     .frame(maxWidth: .infinity)
                     .padding(AppTheme.s24)
-                    .background(AppTheme.cardBG)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .background(AppTheme.screenBG)
+                    .clipShape(RoundedRectangle(cornerRadius: 0))
                     
-                    // Workout details (card)
-                    VStack(alignment: .leading, spacing: AppTheme.s16) {
-                        Text("פרטי האימון")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        
-                        VStack(spacing: AppTheme.s16) {
-                            // Workout label
-                            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                                Text("תגית אימון")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
+                    // Workout Details Card
+                    VStack(alignment: .leading, spacing: AppTheme.s20) {
+                        // Card header
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("פרטי האימון")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
                                     .foregroundStyle(AppTheme.primary)
-                                
+
+                                Text("הגדרות האימון הנוכחי")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "gear")
+                                .font(.title3)
+                                .foregroundStyle(AppTheme.accent)
+                        }
+
+                        VStack(spacing: AppTheme.s20) {
+                            // Modern Workout Label Selection
+                            VStack(alignment: .leading, spacing: AppTheme.s12) {
+                                HStack {
+                                    Text("תגית אימון")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(AppTheme.primary)
+
+                                    Spacer()
+
+                                    Text("בחר את סוג האימון")
+                                        .font(.caption)
+                                        .foregroundStyle(AppTheme.secondary)
+                                }
+
                                 if allowedLabels.count > 1 {
-                                    HStack(spacing: AppTheme.s8) {
+                                    HStack(spacing: AppTheme.s12) {
                                         ForEach(allowedLabels, id: \.self) { label in
-                                            Button(action: { workoutLabel = label }) {
-                                                Text(label)
-                                                    .font(.subheadline)
-                                                    .fontWeight(.semibold)
-                                                    .padding(.vertical, AppTheme.s8)
-                                                    .padding(.horizontal, AppTheme.s12)
-                                                    .background(workoutLabel == label ? AppTheme.accent.opacity(0.2) : AppTheme.cardBG)
-                                                    .foregroundStyle(workoutLabel == label ? AppTheme.accent : .primary)
-                                                    .clipShape(Capsule())
+                                            Button(action: {
+                                                withAnimation(.easeInOut(duration: 0.2)) {
+                                                    workoutLabel = label
+                                                }
+                                            }) {
+                                                VStack(spacing: 6) {
+                                                    ZStack {
+                                                        Circle()
+                                                            .fill(workoutLabel == label ? AppTheme.accent : AppTheme.cardBG)
+                                                            .frame(width: 44, height: 44)
+                                                            .overlay(
+                                                                Circle()
+                                                                    .stroke(workoutLabel == label ? AppTheme.accent : AppTheme.secondary.opacity(0.3), lineWidth: 1.5)
+                                                            )
+
+                                                        Text(label)
+                                                            .font(.title3)
+                                                            .fontWeight(.bold)
+                                                            .foregroundStyle(workoutLabel == label ? .white : AppTheme.primary)
+                                                    }
+
+                                                    Text("אימון \(label)")
+                                                        .font(.caption2)
+                                                        .fontWeight(.medium)
+                                                        .foregroundStyle(workoutLabel == label ? AppTheme.accent : AppTheme.secondary)
+                                                }
+                                                .frame(maxWidth: .infinity)
                                             }
                                             .buttonStyle(.plain)
                                         }
                                     }
+                                    .padding(.vertical, AppTheme.s8)
                                 } else {
-                                    TextField("A", text: $workoutLabel)
-                                        .textFieldStyle(.roundedBorder)
-                                        .font(.title2)
-                                        .fontWeight(.bold)
-                                        .multilineTextAlignment(.center)
+                                    HStack {
+                                        ZStack {
+                                            Circle()
+                                                .fill(AppTheme.accent.opacity(0.1))
+                                                .frame(width: 44, height: 44)
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(AppTheme.accent, lineWidth: 1.5)
+                                                )
+
+                                            TextField("A", text: $workoutLabel)
+                                                .font(.title3)
+                                                .fontWeight(.bold)
+                                                .multilineTextAlignment(.center)
+                                                .foregroundStyle(AppTheme.accent)
+                                                .frame(width: 30)
+                                        }
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text("תגית מותאמת")
+                                                .font(.subheadline)
+                                                .fontWeight(.medium)
+                                                .foregroundStyle(AppTheme.primary)
+
+                                            Text("הזן תגית עבור האימון")
+                                                .font(.caption)
+                                                .foregroundStyle(AppTheme.secondary)
+                                        }
+
+                                        Spacer()
+                                    }
+                                    .padding(.vertical, AppTheme.s8)
                                 }
                             }
                             
-                            // Duration
-                            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                                Text("זמן אימון")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(AppTheme.primary)
-                                
-                                HStack(spacing: AppTheme.s16) {
-                                    VStack {
+                            // Modern Duration Input
+                            VStack(alignment: .leading, spacing: AppTheme.s12) {
+                                HStack {
+                                    Text("זמן אימון")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(AppTheme.primary)
+
+                                    Spacer()
+
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "clock.fill")
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.warning)
+
+                                        Text("מדידת זמן האימון")
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.secondary)
+                                    }
+                                }
+
+                                HStack(spacing: AppTheme.s20) {
+                                    // Minutes control
+                                    VStack(spacing: AppTheme.s8) {
                                         Text("דקות")
                                             .font(.caption)
+                                            .fontWeight(.medium)
                                             .foregroundStyle(AppTheme.secondary)
-                                        Stepper(value: $durationMinutes, in: 0...300) {
+
+                                        HStack(spacing: AppTheme.s8) {
+                                            Button(action: {
+                                                if durationMinutes > 0 {
+                                                    durationMinutes -= 1
+                                                }
+                                            }) {
+                                                Image(systemName: "minus")
+                                                    .font(.caption)
+                                                    .fontWeight(.bold)
+                                                    .foregroundStyle(.white)
+                                                    .frame(width: 28, height: 28)
+                                                    .background(AppTheme.secondary)
+                                                    .clipShape(Circle())
+                                            }
+                                            .buttonStyle(.plain)
+
                                             Text("\(durationMinutes)")
-                                                .font(.headline)
+                                                .font(.title3)
                                                 .fontWeight(.bold)
+                                                .foregroundStyle(AppTheme.primary)
+                                                .frame(width: 40)
+
+                                            Button(action: {
+                                                if durationMinutes < 300 {
+                                                    durationMinutes += 1
+                                                }
+                                            }) {
+                                                Image(systemName: "plus")
+                                                    .font(.caption)
+                                                    .fontWeight(.bold)
+                                                    .foregroundStyle(.white)
+                                                    .frame(width: 28, height: 28)
+                                                    .background(AppTheme.accent)
+                                                    .clipShape(Circle())
+                                            }
+                                            .buttonStyle(.plain)
                                         }
                                     }
-                                    
-                                    Text(":")
-                                        .font(.title2)
-                                        .fontWeight(.bold)
-                                    
+
+                                    // Separator
                                     VStack {
+                                        Text(":")
+                                            .font(.title2)
+                                            .fontWeight(.bold)
+                                            .foregroundStyle(AppTheme.secondary)
+                                            .padding(.top, 20)
+                                    }
+
+                                    // Seconds control
+                                    VStack(spacing: AppTheme.s8) {
                                         Text("שניות")
                                             .font(.caption)
+                                            .fontWeight(.medium)
                                             .foregroundStyle(AppTheme.secondary)
-                                        Stepper(value: $durationSeconds, in: 0...59) {
+
+                                        HStack(spacing: AppTheme.s8) {
+                                            Button(action: {
+                                                if durationSeconds > 0 {
+                                                    durationSeconds -= 1
+                                                }
+                                            }) {
+                                                Image(systemName: "minus")
+                                                    .font(.caption)
+                                                    .fontWeight(.bold)
+                                                    .foregroundStyle(.white)
+                                                    .frame(width: 28, height: 28)
+                                                    .background(AppTheme.secondary)
+                                                    .clipShape(Circle())
+                                            }
+                                            .buttonStyle(.plain)
+
                                             Text("\(durationSeconds)")
-                                                .font(.headline)
+                                                .font(.title3)
                                                 .fontWeight(.bold)
+                                                .foregroundStyle(AppTheme.primary)
+                                                .frame(width: 40)
+
+                                            Button(action: {
+                                                if durationSeconds < 59 {
+                                                    durationSeconds += 1
+                                                }
+                                            }) {
+                                                Image(systemName: "plus")
+                                                    .font(.caption)
+                                                    .fontWeight(.bold)
+                                                    .foregroundStyle(.white)
+                                                    .frame(width: 28, height: 28)
+                                                    .background(AppTheme.accent)
+                                                    .clipShape(Circle())
+                                            }
+                                            .buttonStyle(.plain)
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, AppTheme.s8)
+                            }
+                            
+                            // Modern Completion Status
+                            VStack(alignment: .leading, spacing: AppTheme.s12) {
+                                HStack {
+                                    Text("סטטוס האימון")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(AppTheme.primary)
+
+                                    Spacer()
+
+                                    HStack(spacing: 4) {
+                                        Circle()
+                                            .fill(isCompleted ? AppTheme.success : AppTheme.warning)
+                                            .frame(width: 8, height: 8)
+
+                                        Text(isCompleted ? "הושלם" : "בתהליך")
+                                            .font(.caption)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(isCompleted ? AppTheme.success : AppTheme.warning)
+                                    }
+                                }
+
+                                HStack(spacing: AppTheme.s12) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("אימון הושלם")
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                            .foregroundStyle(AppTheme.primary)
+
+                                        Text(isCompleted ? "האימון בוצע בהצלחה" : "סמן כאשר תסיים את האימון")
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    Toggle("", isOn: $isCompleted)
+                                        .toggleStyle(SwitchToggleStyle(tint: AppTheme.accent))
+                                        .scaleEffect(1.1)
+                                }
+                                .padding(.vertical, AppTheme.s8)
+                            }
+
+                            Divider()
+                                .foregroundStyle(AppTheme.secondary.opacity(0.3))
+
+                            // Modern Notes Input
+                            VStack(alignment: .leading, spacing: AppTheme.s12) {
+                                HStack {
+                                    Text("הערות")
+                                        .font(.subheadline)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(AppTheme.primary)
+
+                                    Spacer()
+
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "note.text")
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.secondary)
+
+                                        Text("אופציונלי")
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.secondary)
+                                    }
+                                }
+
+                                VStack(alignment: .leading, spacing: AppTheme.s8) {
+                                    TextField("הוסף הערות לאימון...", text: $notes, axis: .vertical)
+                                        .multilineTextAlignment(.trailing)
+                                        .lineLimit(3...6)
+                                        .padding(AppTheme.s16)
+                                        .background(AppTheme.background)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(notes.isEmpty ? AppTheme.secondary.opacity(0.3) : AppTheme.accent.opacity(0.5), lineWidth: 1)
+                                        )
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                                    if !notes.isEmpty {
+                                        HStack {
+                                            Text("\(notes.count) תווים")
+                                                .font(.caption2)
+                                                .foregroundStyle(AppTheme.secondary)
+
+                                            Spacer()
+
+                                            Button("נקה") {
+                                                notes = ""
+                                            }
+                                            .font(.caption)
+                                            .foregroundStyle(AppTheme.accent)
                                         }
                                     }
                                 }
                             }
-                            
-                            // Completion status
-                            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                                Text("סטטוס")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(AppTheme.primary)
-                                
-                                Toggle("אימון הושלם", isOn: $isCompleted)
-                                    .toggleStyle(SwitchToggleStyle(tint: AppTheme.accent))
+                        }
+                    }
+                    .padding(AppTheme.s24)
+                    .background(AppTheme.cardBG)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+
+                    // Exercises section with modern card style
+                    VStack(alignment: .leading, spacing: AppTheme.s16) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("תרגילים")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+
+                                Text("\(session.exerciseSessions.count) תרגילים באימון")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.secondary)
                             }
-                            
-                            // Notes
-                            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                                Text("הערות")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(AppTheme.primary)
-                                
-                                TextField("הוסף הערות לאימון...", text: $notes, axis: .vertical)
-                                    .multilineTextAlignment(.trailing)
-                                    .lineLimit(3...6)
-                                    .padding(AppTheme.s12)
-                                    .background(AppTheme.cardBG)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                            Spacer()
+
+                            Button(action: { showExerciseDetails = true }) {
+                                HStack(spacing: 4) {
+                                    Text("הצג הכל")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+
+                                    Image(systemName: "chevron.backward")
+                                        .font(.caption2)
+                                }
+                                .foregroundStyle(AppTheme.accent)
+                                .padding(.horizontal, AppTheme.s8)
+                                .padding(.vertical, 4)
+                                .background(AppTheme.accent.opacity(0.1))
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        if session.exerciseSessions.isEmpty {
+                            EmptyStateView(
+                                iconSystemName: "dumbbell",
+                                title: "אין תרגילים",
+                                message: "אימון זה עדיין לא מכיל תרגילים",
+                                buttonTitle: nil
+                            ) {}
+                            .padding(.vertical, AppTheme.s16)
+                        } else {
+                            LazyVGrid(columns: [
+                                GridItem(.flexible()),
+                                GridItem(.flexible())
+                            ], spacing: AppTheme.s12) {
+                                ForEach(session.exerciseSessions, id: \.exerciseName) { exerciseSession in
+                                    ExerciseSummaryCard(exerciseSession: exerciseSession) {
+                                        selectedExercise = exerciseSession
+                                        showExerciseDetails = true
+                                    }
+                                }
                             }
                         }
                     }
@@ -1838,60 +1459,57 @@ struct WorkoutSessionEditSheet: View {
                     .background(AppTheme.cardBG)
                     .clipShape(RoundedRectangle(cornerRadius: 20))
                     
-                    // Exercises section
+                    // Session statistics with modern card style
                     VStack(alignment: .leading, spacing: AppTheme.s16) {
                         HStack {
-                            Text("תרגילים")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                            
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("סטטיסטיקות")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+
+                                Text("סיכום האימון")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.secondary)
+                            }
+
                             Spacer()
-                            
-                            Button("הצג פרטים") {
-                                showExerciseDetails = true
+
+                            // Quick completion indicator
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(session.isCompleted == true ? AppTheme.success : AppTheme.warning)
+                                    .frame(width: 8, height: 8)
+
+                                Text(session.isCompleted == true ? "הושלם" : "בתהליך")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(session.isCompleted == true ? AppTheme.success : AppTheme.warning)
                             }
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.accent)
+                            .padding(.horizontal, AppTheme.s8)
+                            .padding(.vertical, 4)
+                            .background((session.isCompleted == true ? AppTheme.success : AppTheme.warning).opacity(0.1))
+                            .clipShape(Capsule())
                         }
-                        
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: AppTheme.s8) {
-                            ForEach(session.exerciseSessions, id: \.exerciseName) { exerciseSession in
-                                ExerciseSummaryCard(exerciseSession: exerciseSession) {
-                                    selectedExercise = exerciseSession
-                                    showExerciseDetails = true
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Session statistics
-                    VStack(alignment: .leading, spacing: AppTheme.s16) {
-                            Text("סטטיסטיקות")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        
+
                         LazyVGrid(columns: [
                             GridItem(.flexible()),
                             GridItem(.flexible()),
                             GridItem(.flexible())
                         ], spacing: AppTheme.s12) {
                             StatCard(
-                                    title: "תרגילים",
-                                    value: "\(session.exerciseSessions.count)",
+                                title: "תרגילים",
+                                value: "\(session.exerciseSessions.count)",
                                 icon: "dumbbell.fill",
                                 color: AppTheme.accent
-                                )
-                                
+                            )
+
                             StatCard(
-                                    title: "סטים",
+                                title: "סטים",
                                 value: "\(totalSets)",
                                 icon: "list.number",
                                 color: AppTheme.success
                             )
-                            
+
                             StatCard(
                                 title: "זמן",
                                 value: formatDuration(session.durationSeconds),
@@ -1900,35 +1518,79 @@ struct WorkoutSessionEditSheet: View {
                             )
                         }
                     }
+                    .padding(20)
+                    .background(AppTheme.cardBG)
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
                     
-                    // Danger zone
-                    VStack(alignment: .leading, spacing: AppTheme.s12) {
-                        Text("אזור מסוכן")
-                                .font(.headline)
-                                .fontWeight(.bold)
-                            .foregroundStyle(AppTheme.error)
-                        
-                        Button("מחק אימון") {
-                            showDeleteConfirmation = true
+                    // Modern Danger Zone
+                    VStack(alignment: .leading, spacing: AppTheme.s16) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("אזור מסוכן")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+                                    .foregroundStyle(AppTheme.error)
+
+                                Text("פעולות בלתי הפיכות")
+                                    .font(.caption)
+                                    .foregroundStyle(AppTheme.secondary)
+                            }
+
+                            Spacer()
+
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.title3)
+                                .foregroundStyle(AppTheme.error)
                         }
-                        .buttonStyle(.bordered)
-                        .foregroundStyle(AppTheme.error)
-                        .frame(maxWidth: .infinity)
+
+                        Button(action: {
+                            showDeleteConfirmation = true
+                        }) {
+                            HStack(spacing: AppTheme.s8) {
+                                Image(systemName: "trash.fill")
+                                    .font(.subheadline)
+
+                                Text("מחק אימון")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                            }
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, AppTheme.s12)
+                            .background(AppTheme.error)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
                     }
+                    .padding(AppTheme.s20)
+                    .background(AppTheme.error.opacity(0.05))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(AppTheme.error.opacity(0.2), lineWidth: 1)
+                    )
                     
-                    Spacer()
+                    Spacer(minLength: 20)
                 }
-                .padding(AppTheme.s24)
+                .padding(.horizontal, AppTheme.s16)
+                .padding(.bottom, AppTheme.s24)
             }
+            .background(AppTheme.screenBG)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("ביטול") { dismiss() }
+                    Button("ביטול") {
+                        dismiss()
+                    }
+                    .foregroundStyle(AppTheme.secondary)
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("שמור") { saveChanges() }
+                    Button("שמור") {
+                        saveChanges()
+                    }
                     .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
                 }
             }
         }
@@ -1987,68 +1649,6 @@ struct WorkoutSessionEditSheet: View {
     }
 }
 
-struct TemplateDetailSheet: View {
-    let template: WorkoutTemplate
-    let onUseTemplate: () -> Void
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: AppTheme.s24) {
-                    // Template header
-                    VStack(spacing: AppTheme.s16) {
-                        Text(template.name)
-                            .font(.title)
-                .fontWeight(.bold)
-                            .multilineTextAlignment(.center)
-                        
-                        Text(template.description)
-                            .font(.body)
-                            .foregroundStyle(AppTheme.secondary)
-                            .multilineTextAlignment(.center)
-                        
-                        HStack(spacing: AppTheme.s16) {
-                            Label("\(template.exercises) תרגילים", systemImage: "dumbbell")
-                            Label(template.duration, systemImage: "clock")
-                            Label(template.difficulty.rawValue, systemImage: "chart.bar")
-                        }
-                .font(.caption)
-                        .foregroundStyle(AppTheme.secondary)
-                    }
-                    
-                    // Template details
-                    VStack(alignment: .leading, spacing: AppTheme.s16) {
-                        Text("פרטי התבנית")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        
-                        Text("תכונה זו תגיע בקרוב - כאן יוצגו התרגילים והסטים של התבנית")
-                            .font(.body)
-                            .foregroundStyle(AppTheme.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    Button("השתמש בתבנית") {
-                        onUseTemplate()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-        .frame(maxWidth: .infinity)
-                }
-                .padding(AppTheme.s24)
-            }
-            .navigationTitle("פרטי תבנית")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("סגור") { dismiss() }
-                }
-            }
-        }
-    }
-}
 
 struct SelectedPlanCard: View {
     let plan: WorkoutPlan
@@ -2127,243 +1727,109 @@ struct PlanPickerSheet: View {
     }
 }
 
-struct TemplatePreviewCard: View {
-    let name: String
-    let description: String
-    let category: WorkoutEditView.TemplateCategory
-    let difficulty: WorkoutTemplate.Difficulty
-    let exercises: Int
-    let duration: String
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s12) {
-            HStack {
-                Text(name)
-                    .font(.headline)
-                    .fontWeight(.bold)
-                    .foregroundStyle(AppTheme.primary)
-                
-                Spacer()
-                
-                Circle()
-                    .fill(difficulty.color)
-                    .frame(width: 8, height: 8)
-            }
-            
-            Text(description)
-                    .font(.caption)
-                .foregroundStyle(AppTheme.secondary)
-                .lineLimit(2)
-            
-            HStack {
-                Label("\(exercises)", systemImage: "dumbbell")
-                Spacer()
-                Label(duration, systemImage: "clock")
-            }
-            .font(.caption2)
-            .foregroundStyle(AppTheme.secondary)
-        }
-        .padding(AppTheme.s16)
-        .background(AppTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
-    }
-}
 
-struct CreateTemplateSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    
-    @State private var templateName = ""
-    @State private var templateDescription = ""
-    @State private var selectedCategory: WorkoutEditView.TemplateCategory = .strength
-    @State private var selectedDifficulty: WorkoutTemplate.Difficulty = .beginner
-    @State private var estimatedDuration = "45-60 דק׳"
-    @State private var exerciseCount = 8
-    
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: AppTheme.s24) {
-                    // Header
-                    VStack(spacing: AppTheme.s16) {
-                        Text("צור תבנית חדשה")
-                            .font(.title)
-                            .fontWeight(.bold)
-                        
-                        Text("צור תבנית אימון מותאמת אישית")
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    
-                    // Template details
-                    VStack(alignment: .leading, spacing: AppTheme.s16) {
-                        Text("פרטי התבנית")
-                            .font(.headline)
-                .fontWeight(.bold)
-            
-                        VStack(spacing: AppTheme.s16) {
-                            // Template name
-                            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                                Text("שם התבנית")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(AppTheme.primary)
-                                
-                                TextField("שם התבנית...", text: $templateName)
-                                    .multilineTextAlignment(.trailing)
-                                    .textFieldStyle(.roundedBorder)
-                                    .font(.headline)
-                            }
-                            
-                            // Template description
-                            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                                Text("תיאור")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(AppTheme.primary)
-                                
-                                TextField("תיאור התבנית...", text: $templateDescription, axis: .vertical)
-                                    .multilineTextAlignment(.trailing)
-                                    .textFieldStyle(.roundedBorder)
-                                    .lineLimit(2...4)
-                            }
-                            
-                            // Category selection
-                            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                                Text("קטגוריה")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(AppTheme.primary)
-                                
-                                Picker("קטגוריה", selection: $selectedCategory) {
-                                    ForEach(WorkoutEditView.TemplateCategory.allCases.filter { $0 != .all }, id: \.self) { category in
-                                        Text(category.rawValue).tag(category)
-                                    }
-                                }
-                                .pickerStyle(.menu)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            }
-                            
-                            // Difficulty selection
-                            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                                Text("רמת קושי")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(AppTheme.primary)
-                                
-                                Picker("רמת קושי", selection: $selectedDifficulty) {
-                                    ForEach(WorkoutTemplate.Difficulty.allCases, id: \.self) { difficulty in
-                                        Text(difficulty.rawValue).tag(difficulty)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-                            }
-                            
-                            // Exercise count
-                            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                                Text("מספר תרגילים")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(AppTheme.primary)
-                                
-                                Stepper(value: $exerciseCount, in: 1...20) {
-                                    Text("\(exerciseCount) תרגילים")
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                }
-                            }
-                            
-                            // Estimated duration
-                            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                                Text("זמן משוער")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundStyle(AppTheme.primary)
-                                
-                                TextField("זמן משוער...", text: $estimatedDuration)
-                                    .textFieldStyle(.roundedBorder)
-                            }
-                        }
-                    }
-                    
-                    // Template preview
-                    VStack(alignment: .leading, spacing: AppTheme.s12) {
-                        Text("תצוגה מקדימה")
-                            .font(.headline)
-                            .fontWeight(.bold)
-                        
-                        TemplatePreviewCard(
-                            name: templateName.isEmpty ? "שם התבנית" : templateName,
-                            description: templateDescription.isEmpty ? "תיאור התבנית" : templateDescription,
-                            category: selectedCategory,
-                            difficulty: selectedDifficulty,
-                            exercises: exerciseCount,
-                            duration: estimatedDuration
-                        )
-                    }
-                    
-                    Spacer()
-                }
-                .padding(AppTheme.s24)
-            }
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("ביטול") { dismiss() }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("צור תבנית") {
-                        createTemplate()
-                    }
-                    .disabled(templateName.isEmpty)
-                    .buttonStyle(.borderedProminent)
-                }
-            }
-        }
-    }
-    
-    private func createTemplate() {
-        // Create template logic would go here
-        // For now, just dismiss
-        dismiss()
-    }
-}
 
 struct ExerciseSummaryCard: View {
     let exerciseSession: ExerciseSession
     let onTap: () -> Void
-    
+
+    private var maxWeight: Double {
+        exerciseSession.setLogs.map { $0.weight }.max() ?? 0
+    }
+
+    private var totalVolume: Double {
+        exerciseSession.setLogs.reduce(0) { $0 + ($1.weight * Double($1.reps)) }
+    }
+
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: AppTheme.s8) {
+            VStack(alignment: .leading, spacing: AppTheme.s12) {
+                // Header with exercise name and arrow
                 HStack {
-            Text(exerciseSession.exerciseName)
-                .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundStyle(AppTheme.primary)
-                        .lineLimit(1)
-                    
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(exerciseSession.exerciseName)
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundStyle(AppTheme.primary)
+                            .lineLimit(1)
+
+                        Text("\(exerciseSession.setLogs.count) סטים")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondary)
+                    }
+
                     Spacer()
-                    
-                    Image(systemName: "chevron.backward")
-                .font(.caption)
-                        .foregroundStyle(AppTheme.secondary)
+
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Image(systemName: "chevron.backward")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.accent)
+
+                        if maxWeight > 0 {
+                            Text("\(maxWeight, specifier: "%.1f") ק״ג")
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundStyle(AppTheme.accent)
+                        }
+                    }
                 }
-                
-                HStack {
-                    Label("\(exerciseSession.setLogs.count)", systemImage: "list.number")
+
+                // Stats row with better visual hierarchy
+                HStack(spacing: AppTheme.s16) {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(exerciseSession.setLogs.isEmpty ? AppTheme.error : AppTheme.success)
+                            .frame(width: 8, height: 8)
+
+                        Text("\(exerciseSession.setLogs.count) סטים")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(AppTheme.primary)
+                    }
+
+                    if totalVolume > 0 {
+                        HStack(spacing: 4) {
+                            Image(systemName: "scalemass.fill")
+                                .font(.caption2)
+                                .foregroundStyle(AppTheme.info)
+
+                            Text("\(Int(totalVolume)) ק״ג")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(AppTheme.secondary)
+                        }
+                    }
+
                     Spacer()
-                    Label("\(exerciseSession.setLogs.count) סטים", systemImage: "checkmark.circle")
+
+                    // Status indicator
+                    HStack(spacing: 4) {
+                        Image(systemName: exerciseSession.setLogs.isEmpty ? "circle" : "checkmark.circle.fill")
+                            .font(.caption)
+                            .foregroundStyle(exerciseSession.setLogs.isEmpty ? AppTheme.secondary : AppTheme.success)
+
+                        Text(exerciseSession.setLogs.isEmpty ? "לא התחיל" : "הושלם")
+                            .font(.caption2)
+                            .fontWeight(.medium)
+                            .foregroundStyle(exerciseSession.setLogs.isEmpty ? AppTheme.secondary : AppTheme.success)
+                    }
                 }
-                .font(.caption2)
-                .foregroundStyle(AppTheme.secondary)
             }
-            .padding(AppTheme.s12)
-            .background(AppTheme.secondaryBackground)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(AppTheme.s16)
+            .background(AppTheme.cardBG)
+            .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
+            .overlay(
+                RoundedRectangle(cornerRadius: AppTheme.r16)
+                    .stroke(
+                        exerciseSession.setLogs.isEmpty ? AppTheme.secondary.opacity(0.2) : AppTheme.success.opacity(0.3),
+                        lineWidth: 1
+                    )
+            )
+            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
         }
         .buttonStyle(.plain)
+        .scaleEffect(1.0)
+        .animation(.easeInOut(duration: 0.1), value: exerciseSession.setLogs.count)
     }
 }
 
@@ -2384,24 +1850,143 @@ struct ExerciseDetailsSheet: View {
     }
     
     private var headerSection: some View {
-        VStack(spacing: AppTheme.s16) {
-            Text(exerciseSession.exerciseName)
-                .font(.title)
-                .fontWeight(.bold)
-                .multilineTextAlignment(.center)
-            
-            Text("\(exerciseSession.setLogs.count) סטים")
-                .font(.subheadline)
-                .foregroundStyle(AppTheme.secondary)
+        VStack(spacing: AppTheme.s20) {
+            // Modern exercise header with gradient background
+            VStack(spacing: AppTheme.s16) {
+                // Exercise icon with modern styling
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [AppTheme.accent.opacity(0.2), AppTheme.accent.opacity(0.05)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 90, height: 90)
+                        .overlay(
+                            Circle()
+                                .stroke(AppTheme.accent.opacity(0.3), lineWidth: 2)
+                        )
+
+                    Image(systemName: "dumbbell.fill")
+                        .font(.system(size: 36, weight: .bold))
+                        .foregroundStyle(AppTheme.accent)
+                }
+
+                VStack(spacing: 8) {
+                    Text(exerciseSession.exerciseName)
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .multilineTextAlignment(.center)
+                        .foregroundStyle(AppTheme.primary)
+
+                    // Status badge
+                    HStack(spacing: 6) {
+                        Circle()
+                            .fill(exerciseSession.setLogs.isEmpty ? AppTheme.warning : AppTheme.success)
+                            .frame(width: 8, height: 8)
+
+                        Text(exerciseSession.setLogs.isEmpty ? "לא התחיל" : "הושלם")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(exerciseSession.setLogs.isEmpty ? AppTheme.warning : AppTheme.success)
+                    }
+                    .padding(.horizontal, AppTheme.s12)
+                    .padding(.vertical, 6)
+                    .background(
+                        (exerciseSession.setLogs.isEmpty ? AppTheme.warning : AppTheme.success).opacity(0.1)
+                    )
+                    .clipShape(Capsule())
+                }
+            }
+
+            // Enhanced stats grid
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: AppTheme.s12) {
+                StatCard(
+                    title: "סטים",
+                    value: "\(exerciseSession.setLogs.count)",
+                    icon: "list.number",
+                    color: AppTheme.accent
+                )
+
+                if totalVolume > 0 {
+                    StatCard(
+                        title: "נפח כולל",
+                        value: "\(Int(totalVolume)) ק״ג",
+                        icon: "scalemass.fill",
+                        color: AppTheme.success
+                    )
+                } else {
+                    StatCard(
+                        title: "נפח כולל",
+                        value: "0 ק״ג",
+                        icon: "scalemass",
+                        color: AppTheme.secondary
+                    )
+                }
+
+                if averageRPE > 0 {
+                    StatCard(
+                        title: "RPE ממוצע",
+                        value: "\(averageRPE, specifier: "%.1f")",
+                        icon: "chart.bar.fill",
+                        color: AppTheme.warning
+                    )
+                } else {
+                    StatCard(
+                        title: "RPE ממוצע",
+                        value: "N/A",
+                        icon: "chart.bar",
+                        color: AppTheme.secondary
+                    )
+                }
+            }
         }
+        .padding(AppTheme.s24)
+        .background(
+            LinearGradient(
+                colors: [AppTheme.cardBG, AppTheme.background],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 24))
+        .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 3)
     }
     
     private var setsSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.s16) {
-            Text("סטים")
-                .font(.headline)
-                .fontWeight(.bold)
-            
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("סטים")
+                        .font(.headline)
+                        .fontWeight(.bold)
+
+                    if !exerciseSession.setLogs.isEmpty {
+                        Text("רישום מפורט של הביצוע")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondary)
+                    }
+                }
+
+                Spacer()
+
+                if !exerciseSession.setLogs.isEmpty {
+                    Text("\(exerciseSession.setLogs.count) סטים")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(AppTheme.accent)
+                        .padding(.horizontal, AppTheme.s8)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.accent.opacity(0.1))
+                        .clipShape(Capsule())
+                }
+            }
+
             if exerciseSession.setLogs.isEmpty {
                 EmptyStateView(
                     iconSystemName: "list.number",
@@ -2409,8 +1994,9 @@ struct ExerciseDetailsSheet: View {
                     message: "לא נרשמו סטים לתרגיל זה",
                     buttonTitle: nil
                 ) {}
+                .padding(.vertical, AppTheme.s16)
             } else {
-                LazyVStack(spacing: AppTheme.s8) {
+                LazyVStack(spacing: AppTheme.s12) {
                     ForEach(Array(exerciseSession.setLogs.enumerated()), id: \.offset) { index, setLog in
                         SetDetailRow(
                             setNumber: index + 1,
@@ -2422,18 +2008,49 @@ struct ExerciseDetailsSheet: View {
                 }
             }
         }
+        .padding(20)
+        .background(AppTheme.cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
     
     private var statisticsSection: some View {
         VStack(alignment: .leading, spacing: AppTheme.s16) {
-            Text("סטטיסטיקות")
-                .font(.headline)
-                .fontWeight(.bold)
-            
-                LazyVGrid(columns: [
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("סטטיסטיקות")
+                        .font(.headline)
+                        .fontWeight(.bold)
+
+                    Text("נתונים מפורטים על הביצוע")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondary)
+                }
+
+                Spacer()
+
+                // Performance indicator
+                if !exerciseSession.setLogs.isEmpty {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(AppTheme.success)
+                            .frame(width: 8, height: 8)
+
+                        Text("בוצע")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(AppTheme.success)
+                    }
+                    .padding(.horizontal, AppTheme.s8)
+                    .padding(.vertical, 4)
+                    .background(AppTheme.success.opacity(0.1))
+                    .clipShape(Capsule())
+                }
+            }
+
+            LazyVGrid(columns: [
                 GridItem(.flexible()),
                 GridItem(.flexible()),
-                    GridItem(.flexible())
+                GridItem(.flexible())
             ], spacing: AppTheme.s12) {
                 StatCard(
                     title: "סטים",
@@ -2441,40 +2058,264 @@ struct ExerciseDetailsSheet: View {
                     icon: "list.number",
                     color: AppTheme.accent
                 )
-                
+
                 StatCard(
-                    title: "סטים הושלמו",
-                    value: "\(exerciseSession.setLogs.count)",
-                    icon: "scalemass",
+                    title: "נפח כולל",
+                    value: "\(Int(totalVolume)) ק״ג",
+                    icon: "scalemass.fill",
                     color: AppTheme.success
                 )
-                
+
                 StatCard(
                     title: "RPE ממוצע",
                     value: String(format: "%.1f", averageRPE),
-                    icon: "chart.bar",
+                    icon: "chart.bar.fill",
                     color: AppTheme.warning
                 )
             }
         }
+        .padding(20)
+        .background(AppTheme.cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
     }
-    
+
+    private var quickOverviewSection: some View {
+        LazyVGrid(columns: [
+            GridItem(.flexible()),
+            GridItem(.flexible())
+        ], spacing: AppTheme.s12) {
+            // Best set card
+            VStack(spacing: AppTheme.s8) {
+                HStack {
+                    Image(systemName: "crown.fill")
+                        .font(.title3)
+                        .foregroundStyle(AppTheme.warning)
+
+                    Text("הסט הטוב ביותר")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(AppTheme.secondary)
+
+                    Spacer()
+                }
+
+                if let bestSet = exerciseSession.setLogs.max(by: { $0.weight < $1.weight }) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(bestSet.weight, specifier: "%.1f") ק״ג")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(AppTheme.primary)
+
+                        Text("\(bestSet.reps) חזרות")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Text("אין נתונים")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(AppTheme.s16)
+            .background(AppTheme.warning.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(AppTheme.warning.opacity(0.2), lineWidth: 1)
+            )
+
+            // Most volume set card
+            VStack(spacing: AppTheme.s8) {
+                HStack {
+                    Image(systemName: "scalemass.fill")
+                        .font(.title3)
+                        .foregroundStyle(AppTheme.success)
+
+                    Text("נפח גבוה ביותר")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(AppTheme.secondary)
+
+                    Spacer()
+                }
+
+                if let volumeSet = exerciseSession.setLogs.max(by: { ($0.weight * Double($0.reps)) < ($1.weight * Double($1.reps)) }) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("\(Int(volumeSet.weight * Double(volumeSet.reps))) ק״ג")
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .foregroundStyle(AppTheme.primary)
+
+                        Text("\(volumeSet.reps) × \(volumeSet.weight, specifier: "%.1f")")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                } else {
+                    Text("אין נתונים")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+            .padding(AppTheme.s16)
+            .background(AppTheme.success.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(AppTheme.success.opacity(0.2), lineWidth: 1)
+            )
+        }
+    }
+
+    private var performanceInsightsSection: some View {
+        VStack(alignment: .leading, spacing: AppTheme.s16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("תובנות ביצוע")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundStyle(AppTheme.primary)
+
+                    Text("ניתוח מתקדם של הביצוע")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.title3)
+                    .foregroundStyle(AppTheme.info)
+            }
+
+            if !exerciseSession.setLogs.isEmpty {
+                VStack(spacing: AppTheme.s12) {
+                    // RPE distribution
+                    VStack(alignment: .leading, spacing: AppTheme.s8) {
+                        Text("רמת קושי (RPE)")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(AppTheme.primary)
+
+                        let rpeCategories = categorizeRPE()
+                        LazyVGrid(columns: [
+                            GridItem(.flexible()),
+                            GridItem(.flexible()),
+                            GridItem(.flexible())
+                        ], spacing: AppTheme.s8) {
+                            RPECategoryCard(title: "קל", count: rpeCategories.easy, color: AppTheme.success)
+                            RPECategoryCard(title: "בינוני", count: rpeCategories.moderate, color: AppTheme.warning)
+                            RPECategoryCard(title: "קשה", count: rpeCategories.hard, color: AppTheme.error)
+                        }
+                    }
+
+                    Divider()
+                        .foregroundStyle(AppTheme.secondary.opacity(0.3))
+
+                    // Volume progression
+                    HStack {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("התקדמות נפח")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(AppTheme.primary)
+
+                            Text("סה״כ נפח באימון זה")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.secondary)
+                        }
+
+                        Spacer()
+
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text("\(Int(totalVolume))")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundStyle(AppTheme.accent)
+
+                            Text("ק״ג נפח")
+                                .font(.caption)
+                                .foregroundStyle(AppTheme.secondary)
+                        }
+                    }
+                }
+            } else {
+                EmptyStateView(
+                    iconSystemName: "chart.bar",
+                    title: "אין נתוני ביצוע",
+                    message: "תובנות יוצגו כאשר יירשמו סטים",
+                    buttonTitle: nil
+                ) {}
+                .padding(.vertical, AppTheme.s8)
+            }
+        }
+        .padding(AppTheme.s20)
+        .background(AppTheme.cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
+    }
+
+    private func categorizeRPE() -> (easy: Int, moderate: Int, hard: Int) {
+        let rpeCounts = exerciseSession.setLogs.reduce((easy: 0, moderate: 0, hard: 0)) { result, setLog in
+            let rpe = setLog.rpe ?? 0.0
+            switch rpe {
+            case 0..<6:
+                return (result.easy + 1, result.moderate, result.hard)
+            case 6..<8:
+                return (result.easy, result.moderate + 1, result.hard)
+            case 8...:
+                return (result.easy, result.moderate, result.hard + 1)
+            default:
+                return result
+            }
+        }
+        return rpeCounts
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: AppTheme.s24) {
+                VStack(spacing: AppTheme.s16) {
+                    // Modern header section
                     headerSection
+
+                    // Quick overview cards
+                    quickOverviewSection
+
+                    // Sets detailed view
                     setsSection
+
+                    // Enhanced statistics
                     statisticsSection
-                    Spacer()
+
+                    // Performance insights
+                    performanceInsightsSection
+
+                    Spacer(minLength: 20)
                 }
-                .padding(AppTheme.s24)
+                .padding(.horizontal, AppTheme.s16)
+                .padding(.bottom, AppTheme.s24)
             }
+            .background(AppTheme.screenBG)
             .navigationTitle("פרטי תרגיל")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("סגור") { dismiss() }
+                    Button("סגור") {
+                        dismiss()
+                    }
+                    .foregroundStyle(AppTheme.secondary)
+                }
+
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: {}) {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.title3)
+                            .foregroundStyle(AppTheme.accent)
+                    }
                 }
             }
         }
@@ -2486,39 +2327,133 @@ struct SetDetailRow: View {
     let reps: Int
     let weight: Double
     let rpe: Double
-    
+
     private var setVolume: Int {
         Int(weight * Double(reps))
     }
-    
+
+    private var rpeColor: Color {
+        switch rpe {
+        case 0..<6: return AppTheme.success
+        case 6..<8: return AppTheme.warning
+        case 8...: return AppTheme.error
+        default: return AppTheme.secondary
+        }
+    }
+
     var body: some View {
-        HStack {
-            Text("\(setNumber)")
-                .font(.headline)
-                .fontWeight(.bold)
-                .foregroundStyle(AppTheme.accent)
-                .frame(width: 30)
-            
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(reps) חזרות × \(weight, specifier: "%.1f") ק״ג")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                
-                Text("RPE: \(rpe, specifier: "%.1f")")
-                    .font(.caption)
-                    .foregroundStyle(AppTheme.secondary)
+        HStack(spacing: AppTheme.s12) {
+            // Set number indicator
+            ZStack {
+                Circle()
+                    .fill(AppTheme.accent.opacity(0.1))
+                    .frame(width: 32, height: 32)
+
+                Text("\(setNumber)")
+                    .font(.headline)
+                    .fontWeight(.bold)
+                    .foregroundStyle(AppTheme.accent)
             }
-            
-            Spacer()
-            
-            Text("\(reps) חזרות")
+
+            // Main set information
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text("\(reps)")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundStyle(AppTheme.primary)
+
+                    Text("חזרות")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondary)
+
+                    Text("×")
+                        .font(.subheadline)
+                        .foregroundStyle(AppTheme.secondary)
+                        .padding(.horizontal, 4)
+
+                    Text("\(weight, specifier: "%.1f")")
+                        .font(.title3)
+                        .fontWeight(.bold)
+                        .foregroundStyle(AppTheme.primary)
+
+                    Text("ק״ג")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.secondary)
+
+                    Spacer()
+                }
+
+                HStack(spacing: AppTheme.s8) {
+                    // Volume indicator
+                    HStack(spacing: 4) {
+                        Image(systemName: "scalemass.fill")
+                            .font(.caption2)
+                            .foregroundStyle(AppTheme.info)
+
+                        Text("\(setVolume) ק״ג נפח")
+                            .font(.caption)
+                            .foregroundStyle(AppTheme.secondary)
+                    }
+
+                    Spacer()
+
+                    // RPE indicator with color coding
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(rpeColor)
+                            .frame(width: 6, height: 6)
+
+                        Text("RPE \(rpe, specifier: "%.1f")")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(rpeColor)
+                    }
+                    .padding(.horizontal, AppTheme.s8)
+                    .padding(.vertical, 4)
+                    .background(rpeColor.opacity(0.1))
+                    .clipShape(Capsule())
+                }
+            }
+        }
+        .padding(AppTheme.s16)
+        .background(AppTheme.cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
+        .overlay(
+            RoundedRectangle(cornerRadius: AppTheme.r16)
+                .stroke(AppTheme.accent.opacity(0.1), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.03), radius: 1, x: 0, y: 1)
+    }
+}
+
+// MARK: - Supporting Components
+
+struct RPECategoryCard: View {
+    let title: String
+    let count: Int
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: AppTheme.s6) {
+            Text("\(count)")
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundStyle(color)
+
+            Text(title)
                 .font(.caption)
                 .fontWeight(.medium)
-                .foregroundStyle(AppTheme.success)
+                .foregroundStyle(AppTheme.secondary)
         }
-        .padding(AppTheme.s12)
-        .background(AppTheme.secondaryBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, AppTheme.s10)
+        .background(color.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(color.opacity(0.3), lineWidth: 1)
+        )
     }
 }
 
