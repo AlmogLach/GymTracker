@@ -65,7 +65,7 @@ final class LiveActivityManager {
             print("🔄 LiveActivity: Timer finished, switching to workout session")
             Task {
                 // End current activity first
-                await endRest()
+                endRest()
                 
                 // Wait a bit for cleanup
                 try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
