@@ -38,7 +38,7 @@ struct RestLiveActivity: Widget {
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                         
-                        Text(context.state.workoutLabel ?? "אימון")
+                        Text(context.attributes.workoutLabel ?? "אימון")
                             .font(.caption)
                             .foregroundColor(.white.opacity(0.8))
                     }
@@ -290,7 +290,7 @@ struct RestLiveActivity: Widget {
                                 .foregroundColor(.white)
                                 .lineLimit(1)
                             
-                            Text(context.state.workoutLabel ?? "")
+                            Text(context.attributes.workoutLabel ?? "")
                                 .font(.caption2)
                                 .foregroundColor(.white.opacity(0.7))
                         }
