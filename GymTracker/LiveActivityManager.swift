@@ -60,6 +60,18 @@ final class LiveActivityManager {
         
         print("🔄 LiveActivity: Updating remaining time to \(seconds) seconds")
         
+        // If timer finished, switch to workout session instead of updating with 0
+        if seconds <= 0 {
+            print("🔄 LiveActivity: Timer finished, switching to workout session")
+            Task {
+                await startWorkoutSession(
+                    workoutLabel: activity.attributes.workoutLabel,
+                    exerciseName: activity.content.state.exerciseName
+                )
+            }
+            return
+        }
+        
         let now = Date()
         let end = now.addingTimeInterval(TimeInterval(max(0, seconds)))
         
