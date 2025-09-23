@@ -683,6 +683,7 @@ struct ModernActiveWorkoutView: View {
                 print("⏰ Rest timer: \(self.restSecondsRemaining) seconds remaining")
                 LiveActivityManager.shared.updateRemaining(self.restSecondsRemaining)
             } else {
+                print("⏰ Rest timer finished, stopping timer")
                 self.stopRestTimer()
             }
         }
@@ -705,8 +706,19 @@ struct ModernActiveWorkoutView: View {
         showRestTimer = false
         restEndsAt = nil
         
-        // End Live Activity
-        LiveActivityManager.shared.endRest()
+        // Switch to workout session Live Activity instead of ending
+        if currentSession != nil {
+            print("🔄 Switching to workout session Live Activity")
+            Task {
+                await LiveActivityManager.shared.startWorkoutSession(
+                    workoutLabel: workout?.label,
+                    exerciseName: currentExercise?.name
+                )
+            }
+        } else {
+            // End Live Activity only if no workout session
+            LiveActivityManager.shared.endRest()
+        }
         
         print("✅ Rest timer stopped successfully")
     }
