@@ -14,171 +14,291 @@ import AppIntents
 struct RestLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestActivityAttributes.self) { context in
-            // LOCK SCREEN - Enhanced professional version
-            VStack(spacing: 16) {
-                // Header with app branding
+            // LOCK SCREEN - Professional gym tracker design
+            VStack(spacing: 20) {
+                // Professional header
                 HStack {
-                    Image(systemName: "figure.strengthtraining.traditional")
-                        .font(.title2)
-                        .foregroundColor(.white)
+                    ZStack {
+                        Circle()
+                            .fill(LinearGradient(
+                                colors: [Color.blue, Color.blue.opacity(0.7)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ))
+                            .frame(width: 50, height: 50)
+                        
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.title2)
+                            .foregroundColor(.white)
+                    }
                     
-                    Text("GymTracker")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.white)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("GymTracker")
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(.white)
+                        
+                        Text(context.state.workoutLabel ?? "אימון")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.8))
+                    }
                     
                     Spacer()
                 }
                 
                 if context.state.remainingSeconds > 0 {
-                    // Rest timer section
-                    VStack(spacing: 12) {
+                    // Rest timer - Professional design
+                    VStack(spacing: 16) {
                         Text("מנוחה")
-                            .font(.title3)
-                            .fontWeight(.semibold)
+                            .font(.title2)
+                            .fontWeight(.bold)
                             .foregroundColor(.white)
                         
                         Text(context.state.exerciseName ?? "תרגיל הבא")
                             .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
+                            .foregroundColor(.white.opacity(0.9))
                             .multilineTextAlignment(.center)
                         
-                        // Timer with circular progress
+                        // Professional timer with progress ring
                         ZStack {
+                            // Background ring
                             Circle()
-                                .stroke(Color.white.opacity(0.3), lineWidth: 4)
-                                .frame(width: 80, height: 80)
+                                .stroke(Color.white.opacity(0.2), lineWidth: 6)
+                                .frame(width: 120, height: 120)
                             
+                            // Progress ring
                             Circle()
-                                .trim(from: 0, to: CGFloat(context.state.remainingSeconds) / CGFloat(120)) // Assuming 2 min default
-                                .stroke(Color.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                                .frame(width: 80, height: 80)
+                                .trim(from: 0, to: CGFloat(context.state.remainingSeconds) / CGFloat(120))
+                                .stroke(
+                                    LinearGradient(
+                                        colors: [Color.blue, Color.cyan],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
+                                    ),
+                                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                                )
+                                .frame(width: 120, height: 120)
                                 .rotationEffect(.degrees(-90))
+                                .animation(.easeInOut(duration: 1), value: context.state.remainingSeconds)
                             
-                            Text(timerInterval: context.state.startedAt...context.state.endsAt)
-                                .font(.title2)
-                                .fontWeight(.bold)
-                                .monospacedDigit()
-                                .foregroundColor(.white)
+                            // Timer text
+                            VStack(spacing: 2) {
+                                Text(timerInterval: context.state.startedAt...context.state.endsAt)
+                                    .font(.title)
+                                    .fontWeight(.bold)
+                                    .monospacedDigit()
+                                    .foregroundColor(.white)
+                                
+                                Text("דקות")
+                                    .font(.caption)
+                                    .foregroundColor(.white.opacity(0.7))
+                            }
                         }
                         
-                        // Control buttons
+                        // Professional control buttons
                         HStack(spacing: 12) {
                             Button(intent: RestSkipIntent()) {
-                                Text("דלג")
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.blue.opacity(0.8))
-                                    .clipShape(Capsule())
+                                VStack(spacing: 4) {
+                                    Image(systemName: "forward.fill")
+                                        .font(.title3)
+                                        .foregroundColor(.white)
+                                    Text("דלג")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                }
+                                .frame(width: 60, height: 50)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.blue.opacity(0.8))
+                                )
                             }
                             
                             Button(intent: RestStopIntent()) {
-                                Text("עצור")
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.red.opacity(0.8))
-                                    .clipShape(Capsule())
+                                VStack(spacing: 4) {
+                                    Image(systemName: "stop.fill")
+                                        .font(.title3)
+                                        .foregroundColor(.white)
+                                    Text("עצור")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                }
+                                .frame(width: 60, height: 50)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.red.opacity(0.8))
+                                )
                             }
                             
                             Button(intent: RestAddMinuteIntent()) {
-                                Text("+1 דק׳")
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.green.opacity(0.8))
-                                    .clipShape(Capsule())
+                                VStack(spacing: 4) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.title3)
+                                        .foregroundColor(.white)
+                                    Text("+1 דק׳")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                }
+                                .frame(width: 60, height: 50)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Color.green.opacity(0.8))
+                                )
                             }
                         }
                     }
                 } else {
-                    // Workout in progress section
-                    VStack(spacing: 12) {
+                    // Workout in progress - Professional design
+                    VStack(spacing: 16) {
                         Text("אימון פעיל")
-                            .font(.title3)
-                            .fontWeight(.semibold)
+                            .font(.title2)
+                            .fontWeight(.bold)
                             .foregroundColor(.white)
                         
                         Text(context.state.exerciseName ?? "תרגיל נוכחי")
                             .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
+                            .foregroundColor(.white.opacity(0.9))
                             .multilineTextAlignment(.center)
                         
-                        // Workout controls
-                        VStack(spacing: 8) {
+                        // Professional workout controls
+                        VStack(spacing: 12) {
+                            // Primary actions
                             HStack(spacing: 12) {
                                 Button(intent: LogSetIntent()) {
-                                    Text("הוסף סט")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.green.opacity(0.8))
-                                        .clipShape(Capsule())
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.title3)
+                                            .foregroundColor(.white)
+                                        Text("הוסף סט")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(width: 70, height: 50)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.green.opacity(0.8))
+                                    )
                                 }
                                 
                                 Button(intent: NextExerciseIntent()) {
-                                    Text("תרגיל הבא")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.blue.opacity(0.8))
-                                        .clipShape(Capsule())
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "arrow.right.circle.fill")
+                                            .font(.title3)
+                                            .foregroundColor(.white)
+                                        Text("הבא")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(width: 70, height: 50)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.blue.opacity(0.8))
+                                    )
                                 }
                             }
                             
+                            // Secondary actions
                             HStack(spacing: 12) {
                                 Button(intent: StartRestIntent()) {
-                                    Text("מנוחה")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.orange.opacity(0.8))
-                                        .clipShape(Capsule())
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "timer")
+                                            .font(.title3)
+                                            .foregroundColor(.white)
+                                        Text("מנוחה")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(width: 70, height: 50)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.orange.opacity(0.8))
+                                    )
                                 }
                                 
                                 Button(intent: FinishWorkoutIntent()) {
-                                    Text("סיים")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.red.opacity(0.8))
-                                        .clipShape(Capsule())
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.title3)
+                                            .foregroundColor(.white)
+                                        Text("סיים")
+                                            .font(.caption)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(width: 70, height: 50)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .fill(Color.red.opacity(0.8))
+                                    )
                                 }
                             }
                         }
                     }
                 }
             }
-            .padding(20)
-            .activityBackgroundTint(Color.black.opacity(0.9))
+            .padding(24)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                Color.black.opacity(0.9),
+                                Color.black.opacity(0.7)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(
+                                LinearGradient(
+                                    colors: [Color.white.opacity(0.3), Color.white.opacity(0.1)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                ),
+                                lineWidth: 1
+                            )
+                    )
+            )
+            .activityBackgroundTint(Color.clear)
             .activitySystemActionForegroundColor(.white)
             
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     HStack(spacing: 8) {
-                        Image(systemName: "figure.strengthtraining.traditional")
-                            .font(.caption)
-                            .foregroundColor(.white)
+                        ZStack {
+                            Circle()
+                                .fill(Color.blue.opacity(0.8))
+                                .frame(width: 32, height: 32)
+                            
+                            Image(systemName: "figure.strengthtraining.traditional")
+                                .font(.caption)
+                                .foregroundColor(.white)
+                        }
                         
-                        Text(context.state.exerciseName ?? "אימון")
-                            .font(.subheadline)
-                            .fontWeight(.medium)
-                            .foregroundColor(.white)
-                            .lineLimit(1)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(context.state.exerciseName ?? "אימון")
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+                            
+                            Text(context.state.workoutLabel ?? "")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.7))
+                        }
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if context.state.remainingSeconds > 0 {
-                        VStack(alignment: .trailing, spacing: 2) {
+                        VStack(alignment: .trailing, spacing: 4) {
                             Text(timerInterval: context.state.startedAt...context.state.endsAt)
                                 .font(.headline)
                                 .fontWeight(.bold)
@@ -190,7 +310,7 @@ struct RestLiveActivity: Widget {
                                 .foregroundColor(.white.opacity(0.7))
                         }
                     } else {
-                        VStack(alignment: .trailing, spacing: 2) {
+                        VStack(alignment: .trailing, spacing: 4) {
                             Image(systemName: "play.circle.fill")
                                 .font(.title3)
                                 .foregroundColor(.green)
@@ -203,89 +323,131 @@ struct RestLiveActivity: Widget {
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     if context.state.remainingSeconds > 0 {
-                        // Rest timer controls
+                        // Rest timer controls - Professional design
                         HStack(spacing: 16) {
                             Button(intent: RestSkipIntent()) {
-                                Text("דלג")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.blue)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.blue.opacity(0.2))
-                                    .clipShape(Capsule())
+                                VStack(spacing: 2) {
+                                    Image(systemName: "forward.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                    Text("דלג")
+                                        .font(.caption2)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                }
+                                .frame(width: 50, height: 40)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.blue.opacity(0.8))
+                                )
                             }
                             
                             Button(intent: RestStopIntent()) {
-                                Text("עצור")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.red)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.red.opacity(0.2))
-                                    .clipShape(Capsule())
+                                VStack(spacing: 2) {
+                                    Image(systemName: "stop.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                    Text("עצור")
+                                        .font(.caption2)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                }
+                                .frame(width: 50, height: 40)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.red.opacity(0.8))
+                                )
                             }
                             
                             Button(intent: RestAddMinuteIntent()) {
-                                Text("+1 דק׳")
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.green)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.green.opacity(0.2))
-                                    .clipShape(Capsule())
+                                VStack(spacing: 2) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                    Text("+1 דק׳")
+                                        .font(.caption2)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.white)
+                                }
+                                .frame(width: 50, height: 40)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(Color.green.opacity(0.8))
+                                )
                             }
                         }
                     } else {
-                        // Workout session controls
+                        // Workout session controls - Professional design
                         VStack(spacing: 8) {
                             HStack(spacing: 16) {
                                 Button(intent: LogSetIntent()) {
-                                    Text("הוסף סט")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.green)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.green.opacity(0.2))
-                                        .clipShape(Capsule())
+                                    VStack(spacing: 2) {
+                                        Image(systemName: "plus.circle.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                        Text("הוסף סט")
+                                            .font(.caption2)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(width: 60, height: 40)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.green.opacity(0.8))
+                                    )
                                 }
                                 
                                 Button(intent: NextExerciseIntent()) {
-                                    Text("תרגיל הבא")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.blue)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.blue.opacity(0.2))
-                                        .clipShape(Capsule())
+                                    VStack(spacing: 2) {
+                                        Image(systemName: "arrow.right.circle.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                        Text("הבא")
+                                            .font(.caption2)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(width: 60, height: 40)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.blue.opacity(0.8))
+                                    )
                                 }
                             }
                             
                             HStack(spacing: 16) {
                                 Button(intent: StartRestIntent()) {
-                                    Text("מנוחה")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.orange)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.orange.opacity(0.2))
-                                        .clipShape(Capsule())
+                                    VStack(spacing: 2) {
+                                        Image(systemName: "timer")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                        Text("מנוחה")
+                                            .font(.caption2)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(width: 60, height: 40)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.orange.opacity(0.8))
+                                    )
                                 }
                                 
                                 Button(intent: FinishWorkoutIntent()) {
-                                    Text("סיים")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                        .foregroundStyle(.red)
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 6)
-                                        .background(Color.red.opacity(0.2))
-                                        .clipShape(Capsule())
+                                    VStack(spacing: 2) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                        Text("סיים")
+                                            .font(.caption2)
+                                            .fontWeight(.semibold)
+                                            .foregroundColor(.white)
+                                    }
+                                    .frame(width: 60, height: 40)
+                                    .background(
+                                        RoundedRectangle(cornerRadius: 8)
+                                            .fill(Color.red.opacity(0.8))
+                                    )
                                 }
                             }
                         }
