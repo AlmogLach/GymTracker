@@ -13,25 +13,23 @@ import SwiftUI
 struct RestLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestActivityAttributes.self) { context in
-            // LOCK SCREEN
+            // LOCK SCREEN - Simple version
             VStack(spacing: 8) {
-                Text(context.state.exerciseName ?? "Rest")
+                Text("Gym Tracker")
                     .font(.headline)
+                    .foregroundColor(.white)
+                
+                Text(context.state.exerciseName ?? "Rest")
+                    .font(.subheadline)
                     .foregroundColor(.white)
                 
                 Text(timerInterval: context.state.startedAt...context.state.endsAt)
                     .font(.title2)
                     .monospacedDigit()
                     .foregroundColor(.white)
-                
-                if let label = context.attributes.workoutLabel, !label.isEmpty {
-                    Text("Workout \(label)")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
             }
-            .padding(12)
-            .activityBackgroundTint(Color.black.opacity(0.15))
+            .padding(16)
+            .activityBackgroundTint(Color.blue.opacity(0.8))
             .activitySystemActionForegroundColor(.white)
             
         } dynamicIsland: { context in
