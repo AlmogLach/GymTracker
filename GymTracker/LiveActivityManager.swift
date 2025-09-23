@@ -4,18 +4,6 @@ import Foundation
 import ActivityKit
 
 @available(iOS 16.1, *)
-struct RestActivityAttributes: ActivityAttributes {
-    public struct ContentState: Codable, Hashable {
-        var remainingSeconds: Int
-        var exerciseName: String?
-        var startedAt: Date
-        var endsAt: Date
-    }
-
-    var workoutLabel: String?
-}
-
-@available(iOS 16.1, *)
 final class LiveActivityManager {
     static let shared = LiveActivityManager()
     private init() {}
@@ -23,7 +11,10 @@ final class LiveActivityManager {
     private var activity: Activity<RestActivityAttributes>?
 
     func startRest(durationSeconds: Int, exerciseName: String?, workoutLabel: String?) {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled, durationSeconds > 0 else { return }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled, durationSeconds > 0 else { 
+            print("LiveActivity: Activities not enabled or duration is 0")
+            return 
+        }
         let start = Date()
         let end = start.addingTimeInterval(TimeInterval(durationSeconds))
         let attributes = RestActivityAttributes(workoutLabel: workoutLabel)
@@ -40,6 +31,7 @@ final class LiveActivityManager {
             } else {
                 activity = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
             }
+            print("LiveActivity started successfully")
         } catch {
             print("LiveActivity start error: \(error)")
         }
