@@ -687,27 +687,44 @@ struct ModernActiveWorkoutView: View {
     }
     
     private func startRestTimer() {
+        print("⏰ Starting rest timer with \(settings.defaultRestSeconds) seconds")
+        
         restSecondsRemaining = settings.defaultRestSeconds
         showRestTimer = true
         restEndsAt = Date().addingTimeInterval(TimeInterval(restSecondsRemaining))
+        
+        // Start local timer
         restTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            if restSecondsRemaining > 0 {
-                restSecondsRemaining -= 1
-                LiveActivityManager.shared.updateRemaining(restSecondsRemaining)
+            if self.restSecondsRemaining > 0 {
+                self.restSecondsRemaining -= 1
+                LiveActivityManager.shared.updateRemaining(self.restSecondsRemaining)
             } else {
-                stopRestTimer()
+                self.stopRestTimer()
             }
         }
         
-        LiveActivityManager.shared.startRest(durationSeconds: restSecondsRemaining, exerciseName: currentExercise?.name, workoutLabel: workout?.label)
+        // Start Live Activity
+        LiveActivityManager.shared.startRest(
+            durationSeconds: restSecondsRemaining, 
+            exerciseName: currentExercise?.name, 
+            workoutLabel: workout?.label
+        )
+        
+        print("✅ Rest timer started successfully")
     }
     
     private func stopRestTimer() {
+        print("⏰ Stopping rest timer")
+        
         restTimer?.invalidate()
         restTimer = nil
         showRestTimer = false
         restEndsAt = nil
+        
+        // End Live Activity
         LiveActivityManager.shared.endRest()
+        
+        print("✅ Rest timer stopped successfully")
     }
     
     private func completeWorkout() {
@@ -743,37 +760,77 @@ struct ModernActiveWorkoutView: View {
     // MARK: - Notification Handlers
     
     private func handleScenePhaseChange(_ phase: ScenePhase) {
+        print("🔄 Scene phase changed to: \(phase)")
+        
         switch phase {
         case .active:
+            print("📱 App became active")
+            
+            // If we have a workout session but no rest timer, end any Live Activities
             if currentSession != nil && !showRestTimer {
+                print("🏋️ Workout session active, ending Live Activities")
                 LiveActivityManager.shared.endRest()
                 hasWorkoutLiveActivity = false
             }
             
+            // Handle rest timer restoration
             if showRestTimer, let endsAt = restEndsAt {
                 let remaining = Int(ceil(endsAt.timeIntervalSinceNow))
+                print("⏰ Rest timer restoration: \(remaining) seconds remaining")
+                
                 if remaining <= 0 {
+                    print("⏰ Rest timer expired while in background")
                     stopRestTimer()
                 } else {
                     restSecondsRemaining = remaining
                     LiveActivityManager.shared.updateRemaining(remaining)
+                    
+                    // Restart the local timer
+                    restTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                        if self.restSecondsRemaining > 0 {
+                            self.restSecondsRemaining -= 1
+                            LiveActivityManager.shared.updateRemaining(self.restSecondsRemaining)
+                        } else {
+                            self.stopRestTimer()
+                        }
+                    }
+                    print("⏰ Rest timer restarted with \(remaining) seconds")
                 }
             }
             
+            // Restart workout timer if needed
+            if currentSession != nil && workoutTimer == nil {
+                startWorkoutTimer()
+                print("⏱️ Workout timer restarted")
+            }
+            
         case .background, .inactive:
+            print("📱 App went to background/inactive")
+            
+            // Stop local timers to save battery
             restTimer?.invalidate()
             restTimer = nil
+            workoutTimer?.invalidate()
+            workoutTimer = nil
             
+            // Start Live Activity for workout session if we have an active workout
             if currentSession != nil && !showRestTimer && !hasWorkoutLiveActivity {
+                print("🏋️ Starting workout Live Activity")
                 hasWorkoutLiveActivity = true
+                
+                // Small delay to ensure smooth transition
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     Task {
-                        await LiveActivityManager.shared.startWorkoutSession(workoutLabel: workout?.label, exerciseName: currentExercise?.name)
+                        await LiveActivityManager.shared.startWorkoutSession(
+                            workoutLabel: self.workout?.label, 
+                            exerciseName: self.currentExercise?.name
+                        )
                     }
                 }
             }
             
         @unknown default:
+            print("⚠️ Unknown scene phase")
             break
         }
     }

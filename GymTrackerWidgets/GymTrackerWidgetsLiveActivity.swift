@@ -14,149 +14,275 @@ import AppIntents
 struct RestLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestActivityAttributes.self) { context in
-            // LOCK SCREEN - Simple version
-            VStack(spacing: 12) {
-                Text("Gym Tracker")
-                    .font(.headline)
-                    .foregroundColor(.white)
-                
-                Text(context.state.exerciseName ?? "Rest")
-                    .font(.subheadline)
-                    .foregroundColor(.white)
-                
-                if context.state.remainingSeconds > 0 {
-                    Text(timerInterval: context.state.startedAt...context.state.endsAt)
+            // LOCK SCREEN - Enhanced professional version
+            VStack(spacing: 16) {
+                // Header with app branding
+                HStack {
+                    Image(systemName: "figure.strengthtraining.traditional")
                         .font(.title2)
-                        .monospacedDigit()
                         .foregroundColor(.white)
                     
-                    // Rest timer buttons
-                    HStack(spacing: 16) {
-                        Link("Skip", destination: URL(string: "gymtracker://rest/skip")!)
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
+                    Text("GymTracker")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                    
+                    Spacer()
+                }
+                
+                if context.state.remainingSeconds > 0 {
+                    // Rest timer section
+                    VStack(spacing: 12) {
+                        Text("מנוחה")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
                         
-                        Link("Stop", destination: URL(string: "gymtracker://rest/stop")!)
-                            .buttonStyle(.bordered)
-                            .controlSize(.small)
+                        Text(context.state.exerciseName ?? "תרגיל הבא")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                            .multilineTextAlignment(.center)
                         
-                        Link("+1min", destination: URL(string: "gymtracker://rest/addminute")!)
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
+                        // Timer with circular progress
+                        ZStack {
+                            Circle()
+                                .stroke(Color.white.opacity(0.3), lineWidth: 4)
+                                .frame(width: 80, height: 80)
+                            
+                            Circle()
+                                .trim(from: 0, to: CGFloat(context.state.remainingSeconds) / CGFloat(120)) // Assuming 2 min default
+                                .stroke(Color.blue, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                                .frame(width: 80, height: 80)
+                                .rotationEffect(.degrees(-90))
+                            
+                            Text(timerInterval: context.state.startedAt...context.state.endsAt)
+                                .font(.title2)
+                                .fontWeight(.bold)
+                                .monospacedDigit()
+                                .foregroundColor(.white)
+                        }
+                        
+                        // Control buttons
+                        HStack(spacing: 12) {
+                            Link("דלג", destination: URL(string: "gymtracker://rest/skip")!)
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.blue.opacity(0.8))
+                                .clipShape(Capsule())
+                            
+                            Link("עצור", destination: URL(string: "gymtracker://rest/stop")!)
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.red.opacity(0.8))
+                                .clipShape(Capsule())
+                            
+                            Link("+1 דק׳", destination: URL(string: "gymtracker://rest/addminute")!)
+                                .font(.caption)
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.green.opacity(0.8))
+                                .clipShape(Capsule())
+                        }
                     }
                 } else {
-                    Text("Workout in Progress")
-                        .font(.subheadline)
-                        .foregroundColor(.white.opacity(0.8))
-                    
-                    // Workout session buttons
-                    VStack(spacing: 8) {
-                        HStack(spacing: 16) {
-                            Link("Log Set", destination: URL(string: "gymtracker://workout/logset")!)
-                                .buttonStyle(.borderedProminent)
-                                .controlSize(.small)
+                    // Workout in progress section
+                    VStack(spacing: 12) {
+                        Text("אימון פעיל")
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.white)
+                        
+                        Text(context.state.exerciseName ?? "תרגיל נוכחי")
+                            .font(.subheadline)
+                            .foregroundColor(.white.opacity(0.8))
+                            .multilineTextAlignment(.center)
+                        
+                        // Workout controls
+                        VStack(spacing: 8) {
+                            HStack(spacing: 12) {
+                                Link("הוסף סט", destination: URL(string: "gymtracker://workout/logset")!)
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.green.opacity(0.8))
+                                    .clipShape(Capsule())
+                                
+                                Link("תרגיל הבא", destination: URL(string: "gymtracker://workout/nextexercise")!)
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.blue.opacity(0.8))
+                                    .clipShape(Capsule())
+                            }
                             
-                            Link("Next Ex", destination: URL(string: "gymtracker://workout/nextexercise")!)
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                        }
-                        HStack(spacing: 16) {
-                            Link("Rest", destination: URL(string: "gymtracker://workout/startrest")!)
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
-                            
-                            Link("Finish", destination: URL(string: "gymtracker://workout/finish")!)
-                                .buttonStyle(.bordered)
-                                .controlSize(.small)
+                            HStack(spacing: 12) {
+                                Link("מנוחה", destination: URL(string: "gymtracker://workout/startrest")!)
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.orange.opacity(0.8))
+                                    .clipShape(Capsule())
+                                
+                                Link("סיים", destination: URL(string: "gymtracker://workout/finish")!)
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.red.opacity(0.8))
+                                    .clipShape(Capsule())
+                            }
                         }
                     }
                 }
             }
-            .padding(16)
-            .activityBackgroundTint(Color.blue.opacity(0.8))
+            .padding(20)
+            .activityBackgroundTint(Color.black.opacity(0.9))
             .activitySystemActionForegroundColor(.white)
             
         } dynamicIsland: { context in
             DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    Text(context.state.exerciseName ?? "Rest")
-                        .font(.subheadline)
-                        .foregroundColor(.white)
+                    HStack(spacing: 8) {
+                        Image(systemName: "figure.strengthtraining.traditional")
+                            .font(.caption)
+                            .foregroundColor(.white)
+                        
+                        Text(context.state.exerciseName ?? "אימון")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+                    }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if context.state.remainingSeconds > 0 {
-                        Text(timerInterval: context.state.startedAt...context.state.endsAt)
-                            .font(.headline)
-                            .monospacedDigit()
-                            .foregroundColor(.white)
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Text(timerInterval: context.state.startedAt...context.state.endsAt)
+                                .font(.headline)
+                                .fontWeight(.bold)
+                                .monospacedDigit()
+                                .foregroundColor(.white)
+                            
+                            Text("מנוחה")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.7))
+                        }
                     } else {
-                        Text("In Progress")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.8))
+                        VStack(alignment: .trailing, spacing: 2) {
+                            Image(systemName: "play.circle.fill")
+                                .font(.title3)
+                                .foregroundColor(.green)
+                            
+                            Text("פעיל")
+                                .font(.caption2)
+                                .foregroundColor(.white.opacity(0.7))
+                        }
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     if context.state.remainingSeconds > 0 {
                         // Rest timer controls
-                        HStack(spacing: 12) {
-                            Link("Skip", destination: URL(string: "gymtracker://rest/skip")!)
+                        HStack(spacing: 16) {
+                            Link("דלג", destination: URL(string: "gymtracker://rest/skip")!)
                                 .font(.caption)
+                                .fontWeight(.semibold)
                                 .foregroundStyle(.blue)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.blue.opacity(0.2))
+                                .clipShape(Capsule())
                             
-                            Link("Stop", destination: URL(string: "gymtracker://rest/stop")!)
+                            Link("עצור", destination: URL(string: "gymtracker://rest/stop")!)
                                 .font(.caption)
-                                .foregroundStyle(.blue)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.red)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.red.opacity(0.2))
+                                .clipShape(Capsule())
                             
-                            Link("+1min", destination: URL(string: "gymtracker://rest/addminute")!)
+                            Link("+1 דק׳", destination: URL(string: "gymtracker://rest/addminute")!)
                                 .font(.caption)
-                                .foregroundStyle(.blue)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.green)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Color.green.opacity(0.2))
+                                .clipShape(Capsule())
                         }
                     } else {
                         // Workout session controls
                         VStack(spacing: 8) {
-                            HStack(spacing: 12) {
-                                Link("Log Set", destination: URL(string: "gymtracker://workout/logset")!)
+                            HStack(spacing: 16) {
+                                Link("הוסף סט", destination: URL(string: "gymtracker://workout/logset")!)
                                     .font(.caption)
-                                    .foregroundStyle(.blue)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.green)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.green.opacity(0.2))
+                                    .clipShape(Capsule())
                                 
-                                Link("Next Ex", destination: URL(string: "gymtracker://workout/nextexercise")!)
+                                Link("תרגיל הבא", destination: URL(string: "gymtracker://workout/nextexercise")!)
                                     .font(.caption)
+                                    .fontWeight(.semibold)
                                     .foregroundStyle(.blue)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.blue.opacity(0.2))
+                                    .clipShape(Capsule())
                             }
-                            HStack(spacing: 12) {
-                                Link("Rest", destination: URL(string: "gymtracker://workout/startrest")!)
+                            
+                            HStack(spacing: 16) {
+                                Link("מנוחה", destination: URL(string: "gymtracker://workout/startrest")!)
                                     .font(.caption)
-                                    .foregroundStyle(.blue)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.orange)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.orange.opacity(0.2))
+                                    .clipShape(Capsule())
                                 
-                                Link("Finish", destination: URL(string: "gymtracker://workout/finish")!)
+                                Link("סיים", destination: URL(string: "gymtracker://workout/finish")!)
                                     .font(.caption)
-                                    .foregroundStyle(.blue)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.red)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.red.opacity(0.2))
+                                    .clipShape(Capsule())
                             }
                         }
                     }
                 }
             } compactLeading: {
-                Image(systemName: "timer")
+                Image(systemName: context.state.remainingSeconds > 0 ? "timer" : "figure.strengthtraining.traditional")
+                    .font(.caption)
                     .foregroundColor(.white)
             } compactTrailing: {
                 if context.state.remainingSeconds > 0 {
                     Text(timerInterval: context.state.startedAt...context.state.endsAt)
-                        .font(.footnote)
+                        .font(.caption)
+                        .fontWeight(.semibold)
                         .monospacedDigit()
                         .foregroundColor(.white)
                 } else {
-                    Image(systemName: "figure.strengthtraining.traditional")
-                        .foregroundColor(.white)
+                    Image(systemName: "play.circle.fill")
+                        .font(.caption)
+                        .foregroundColor(.green)
                 }
             } minimal: {
-                if context.state.remainingSeconds > 0 {
-                    Image(systemName: "timer")
-                        .foregroundColor(.white)
-                } else {
-                    Image(systemName: "figure.strengthtraining.traditional")
-                        .foregroundColor(.white)
-                }
-            }
+                Image(systemName: context.state.remainingSeconds > 0 ? "timer" : "figure.strengthtraining.traditional")
+                    .font(.caption)
+                    .foregroundColor(.white)
         }
     }
 }
