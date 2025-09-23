@@ -97,7 +97,7 @@ struct RestLiveActivity: Widget {
                         
                         // Professional control buttons
                         HStack(spacing: 12) {
-                            Button(intent: RestSkipIntent()) {
+                            Link(destination: URL(string: "gymtracker://rest/skip")!) {
                                 VStack(spacing: 4) {
                                     Image(systemName: "forward.fill")
                                         .font(.title3)
@@ -114,7 +114,7 @@ struct RestLiveActivity: Widget {
                                 )
                             }
                             
-                            Button(intent: RestStopIntent()) {
+                            Link(destination: URL(string: "gymtracker://rest/stop")!) {
                                 VStack(spacing: 4) {
                                     Image(systemName: "stop.fill")
                                         .font(.title3)
@@ -131,7 +131,7 @@ struct RestLiveActivity: Widget {
                                 )
                             }
                             
-                            Button(intent: RestAddMinuteIntent()) {
+                            Link(destination: URL(string: "gymtracker://rest/addminute")!) {
                                 VStack(spacing: 4) {
                                     Image(systemName: "plus.circle.fill")
                                         .font(.title3)
@@ -166,7 +166,7 @@ struct RestLiveActivity: Widget {
                         VStack(spacing: 12) {
                             // Primary actions
                             HStack(spacing: 12) {
-                                Button(intent: LogSetIntent()) {
+                                Link(destination: URL(string: "gymtracker://workout/logset")!) {
                                     VStack(spacing: 4) {
                                         Image(systemName: "plus.circle.fill")
                                             .font(.title3)
@@ -183,7 +183,7 @@ struct RestLiveActivity: Widget {
                                     )
                                 }
                                 
-                                Button(intent: NextExerciseIntent()) {
+                                Link(destination: URL(string: "gymtracker://workout/nextexercise")!) {
                                     VStack(spacing: 4) {
                                         Image(systemName: "arrow.right.circle.fill")
                                             .font(.title3)
@@ -203,7 +203,7 @@ struct RestLiveActivity: Widget {
                             
                             // Secondary actions
                             HStack(spacing: 12) {
-                                Button(intent: StartRestIntent()) {
+                                Link(destination: URL(string: "gymtracker://workout/startrest")!) {
                                     VStack(spacing: 4) {
                                         Image(systemName: "timer")
                                             .font(.title3)
@@ -220,7 +220,7 @@ struct RestLiveActivity: Widget {
                                     )
                                 }
                                 
-                                Button(intent: FinishWorkoutIntent()) {
+                                Link(destination: URL(string: "gymtracker://workout/finish")!) {
                                     VStack(spacing: 4) {
                                         Image(systemName: "checkmark.circle.fill")
                                             .font(.title3)
@@ -325,7 +325,7 @@ struct RestLiveActivity: Widget {
                     if context.state.remainingSeconds > 0 {
                         // Rest timer controls - Professional design
                         HStack(spacing: 16) {
-                            Button(intent: RestSkipIntent()) {
+                            Link(destination: URL(string: "gymtracker://rest/skip")!) {
                                 VStack(spacing: 2) {
                                     Image(systemName: "forward.fill")
                                         .font(.caption)
@@ -342,7 +342,7 @@ struct RestLiveActivity: Widget {
                                 )
                             }
                             
-                            Button(intent: RestStopIntent()) {
+                            Link(destination: URL(string: "gymtracker://rest/stop")!) {
                                 VStack(spacing: 2) {
                                     Image(systemName: "stop.fill")
                                         .font(.caption)
@@ -359,7 +359,7 @@ struct RestLiveActivity: Widget {
                                 )
                             }
                             
-                            Button(intent: RestAddMinuteIntent()) {
+                            Link(destination: URL(string: "gymtracker://rest/addminute")!) {
                                 VStack(spacing: 2) {
                                     Image(systemName: "plus.circle.fill")
                                         .font(.caption)
@@ -380,7 +380,7 @@ struct RestLiveActivity: Widget {
                         // Workout session controls - Professional design
                         VStack(spacing: 8) {
                             HStack(spacing: 16) {
-                                Button(intent: LogSetIntent()) {
+                                Link(destination: URL(string: "gymtracker://workout/logset")!) {
                                     VStack(spacing: 2) {
                                         Image(systemName: "plus.circle.fill")
                                             .font(.caption)
@@ -397,7 +397,7 @@ struct RestLiveActivity: Widget {
                                     )
                                 }
                                 
-                                Button(intent: NextExerciseIntent()) {
+                                Link(destination: URL(string: "gymtracker://workout/nextexercise")!) {
                                     VStack(spacing: 2) {
                                         Image(systemName: "arrow.right.circle.fill")
                                             .font(.caption)
@@ -416,7 +416,7 @@ struct RestLiveActivity: Widget {
                             }
                             
                             HStack(spacing: 16) {
-                                Button(intent: StartRestIntent()) {
+                                Link(destination: URL(string: "gymtracker://workout/startrest")!) {
                                     VStack(spacing: 2) {
                                         Image(systemName: "timer")
                                             .font(.caption)
@@ -433,7 +433,7 @@ struct RestLiveActivity: Widget {
                                     )
                                 }
                                 
-                                Button(intent: FinishWorkoutIntent()) {
+                                Link(destination: URL(string: "gymtracker://workout/finish")!) {
                                     VStack(spacing: 2) {
                                         Image(systemName: "checkmark.circle.fill")
                                             .font(.caption)
