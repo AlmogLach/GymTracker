@@ -24,6 +24,7 @@ struct ActiveWorkoutView: View {
     @State private var restTimer: Timer?
     @State private var restSecondsRemaining = 0
     @State private var showRestTimer = false
+    @State private var restEndsAt: Date?
     
     @State private var currentWeight: Double = 0.0
     @State private var currentReps: Int = 0
@@ -31,6 +32,7 @@ struct ActiveWorkoutView: View {
     @Query private var settingsList: [AppSettings]
     @Query(sort: [SortDescriptor(\WorkoutSession.date, order: .reverse)]) private var sessions: [WorkoutSession]
     private var settings: AppSettings { settingsList.first ?? AppSettings() }
+    @Environment(\.scenePhase) private var scenePhase
     
     var body: some View {
         NavigationStack {
@@ -79,6 +81,54 @@ struct ActiveWorkoutView: View {
         .onAppear {
             startWorkoutSession()
             initializeCurrentExerciseValues()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active:
+                if showRestTimer, let endsAt = restEndsAt {
+                    let remaining = Int(ceil(endsAt.timeIntervalSinceNow))
+                    if remaining <= 0 {
+                        stopRestTimer()
+                    } else {
+                        restSecondsRemaining = remaining
+                        LiveActivityManager.shared.updateRemaining(remaining)
+                        // Restart ticking timer if needed
+                        if restTimer == nil {
+                            restTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+                                if restSecondsRemaining > 0 {
+                                    restSecondsRemaining -= 1
+                                    LiveActivityManager.shared.updateRemaining(restSecondsRemaining)
+                                } else {
+                                    stopRestTimer()
+                                }
+                            }
+                        }
+                    }
+                }
+            case .background, .inactive:
+                // Pause in-memory timer; remaining time is derived from restEndsAt on resume
+                restTimer?.invalidate()
+                restTimer = nil
+            @unknown default:
+                break
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .restSkipAction)) { _ in
+            // Skip: immediately end rest and move to next exercise
+            if showRestTimer {
+                stopRestTimer()
+                nextExercise()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .restStopAction)) { _ in
+            if showRestTimer {
+                stopRestTimer()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .nextExerciseAction)) { _ in
+            if !showRestTimer {
+                nextExercise()
+            }
         }
         .onDisappear {
             stopWorkoutTimer()
@@ -327,7 +377,9 @@ struct ActiveWorkoutView: View {
             }
 
             // Exercise progress bar
-            ProgressView(value: Double(currentExerciseIndex + 1), total: Double(workout?.exercises.count ?? 1))
+            let totalExercises = max(1, workout?.exercises.count ?? 1)
+            let clampedProgress = min(max(0, currentExerciseIndex + 1), totalExercises)
+            ProgressView(value: Double(clampedProgress), total: Double(totalExercises))
                 .tint(AppTheme.accent)
                 .scaleEffect(y: 2)
 
@@ -475,6 +527,7 @@ struct ActiveWorkoutView: View {
     private func startRestTimer() {
         restSecondsRemaining = settings.defaultRestSeconds
         showRestTimer = true
+        restEndsAt = Date().addingTimeInterval(TimeInterval(restSecondsRemaining))
         restTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             if restSecondsRemaining > 0 {
                 restSecondsRemaining -= 1
@@ -486,14 +539,18 @@ struct ActiveWorkoutView: View {
         // Schedule lock-screen notification for rest end
         NotificationManager.shared.cancelRestEndNotification()
         NotificationManager.shared.scheduleRestEndNotification(after: restSecondsRemaining, exerciseName: currentExercise?.name)
-        LiveActivityManager.shared.startRest(durationSeconds: restSecondsRemaining, exerciseName: currentExercise?.name, workoutLabel: workout?.workoutLabel)
+        LiveActivityManager.shared.startRest(durationSeconds: restSecondsRemaining, exerciseName: currentExercise?.name, workoutLabel: workout?.label)
+        // Also show a persistent controls notification (for devices without Live Activities)
+        NotificationManager.shared.scheduleRestControlsNotification(remaining: restSecondsRemaining, exerciseName: currentExercise?.name)
     }
     
     private func stopRestTimer() {
         restTimer?.invalidate()
         restTimer = nil
         showRestTimer = false
+        restEndsAt = nil
         NotificationManager.shared.cancelRestEndNotification()
+        NotificationManager.shared.removeRestControlsNotification()
         LiveActivityManager.shared.endRest()
     }
 

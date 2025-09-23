@@ -151,6 +151,22 @@ struct GymTrackerApp: App {
                         print("Error during data migration: \(error)")
                     }
                 }
+                .onOpenURL { url in
+                    // Handle deep links from Live Activity / Widget links
+                    guard url.scheme?.lowercased() == "gymtracker" else { return }
+                    let host = (url.host ?? "").lowercased()
+                    let path = url.path.lowercased()
+                    switch (host, path) {
+                    case ("rest", "/skip"):
+                        NotificationCenter.default.post(name: .restSkipAction, object: nil)
+                    case ("rest", "/stop"):
+                        NotificationCenter.default.post(name: .restStopAction, object: nil)
+                    case ("exercise", "/next"):
+                        NotificationCenter.default.post(name: .nextExerciseAction, object: nil)
+                    default:
+                        break
+                    }
+                }
         }
         .modelContainer(sharedModelContainer)
     }

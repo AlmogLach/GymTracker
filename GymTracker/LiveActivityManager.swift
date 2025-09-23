@@ -27,14 +27,19 @@ final class LiveActivityManager {
         let start = Date()
         let end = start.addingTimeInterval(TimeInterval(durationSeconds))
         let attributes = RestActivityAttributes(workoutLabel: workoutLabel)
-        let content = RestActivityAttributes.ContentState(
+        let state = RestActivityAttributes.ContentState(
             remainingSeconds: durationSeconds,
             exerciseName: exerciseName,
             startedAt: start,
             endsAt: end
         )
         do {
-            activity = try Activity.request(attributes: attributes, contentState: content, pushType: nil)
+            if #available(iOS 16.2, *) {
+                let content = ActivityContent(state: state, staleDate: nil)
+                activity = try Activity.request(attributes: attributes, content: content, pushType: nil)
+            } else {
+                activity = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
+            }
         } catch {
             print("LiveActivity start error: \(error)")
         }
@@ -44,18 +49,48 @@ final class LiveActivityManager {
         guard let activity else { return }
         let now = Date()
         let end = now.addingTimeInterval(TimeInterval(max(0, seconds)))
-        let state = RestActivityAttributes.ContentState(
-            remainingSeconds: seconds,
-            exerciseName: activity.contentState.exerciseName,
-            startedAt: activity.contentState.startedAt,
-            endsAt: end
-        )
-        Task { await activity.update(using: state) }
+        if #available(iOS 16.2, *) {
+            let previous = activity.content.state
+            let state = RestActivityAttributes.ContentState(
+                remainingSeconds: seconds,
+                exerciseName: previous.exerciseName,
+                startedAt: previous.startedAt,
+                endsAt: end
+            )
+            Task { await activity.update(ActivityContent(state: state, staleDate: nil)) }
+        } else {
+            let previous = activity.contentState
+            let state = RestActivityAttributes.ContentState(
+                remainingSeconds: seconds,
+                exerciseName: previous.exerciseName,
+                startedAt: previous.startedAt,
+                endsAt: end
+            )
+            Task { await activity.update(using: state) }
+        }
     }
 
     func endRest() {
         guard let activity else { return }
-        Task { await activity.end(dismissalPolicy: .immediate) }
+        if #available(iOS 16.2, *) {
+            let previous = activity.content.state
+            let finalState = RestActivityAttributes.ContentState(
+                remainingSeconds: 0,
+                exerciseName: previous.exerciseName,
+                startedAt: previous.startedAt,
+                endsAt: Date()
+            )
+            Task { await activity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: .immediate) }
+        } else {
+            let previous = activity.contentState
+            let finalState = RestActivityAttributes.ContentState(
+                remainingSeconds: 0,
+                exerciseName: previous.exerciseName,
+                startedAt: previous.startedAt,
+                endsAt: Date()
+            )
+            Task { await activity.end(using: finalState, dismissalPolicy: .immediate) }
+        }
         self.activity = nil
     }
 }
