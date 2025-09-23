@@ -94,7 +94,11 @@ final class NotificationManager: NSObject, UNUserNotificationCenterDelegate {
 extension Notification.Name {
     static let restSkipAction = Notification.Name("rest_skip_action")
     static let restStopAction = Notification.Name("rest_stop_action")
+    static let restAddMinuteAction = Notification.Name("rest_add_minute_action")
     static let nextExerciseAction = Notification.Name("next_exercise_action")
+    static let logSetAction = Notification.Name("log_set_action")
+    static let startRestAction = Notification.Name("start_rest_action")
+    static let finishWorkoutAction = Notification.Name("finish_workout_action")
 }
 
 

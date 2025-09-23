@@ -78,52 +78,87 @@ final class LiveActivityManager {
     }
 
     func endRest() {
-        guard let activity else { return }
-        if #available(iOS 16.2, *) {
-            let previous = activity.content.state
-            let finalState = RestActivityAttributes.ContentState(
-                remainingSeconds: 0,
-                exerciseName: previous.exerciseName,
-                startedAt: previous.startedAt,
-                endsAt: Date()
-            )
-            Task { await activity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: .immediate) }
-        } else {
-            let previous = activity.contentState
-            let finalState = RestActivityAttributes.ContentState(
-                remainingSeconds: 0,
-                exerciseName: previous.exerciseName,
-                startedAt: previous.startedAt,
-                endsAt: Date()
-            )
-            Task { await activity.end(using: finalState, dismissalPolicy: .immediate) }
+        print("🔍 LiveActivity: Ending rest/activity")
+        
+        // End all existing activities first
+        let existingActivities = Activity<RestActivityAttributes>.activities
+        for existingActivity in existingActivities {
+            print("🔍 LiveActivity: Ending existing activity: \(existingActivity.id)")
+            if #available(iOS 16.2, *) {
+                let previous = existingActivity.content.state
+                let finalState = RestActivityAttributes.ContentState(
+                    remainingSeconds: 0,
+                    exerciseName: previous.exerciseName,
+                    startedAt: previous.startedAt,
+                    endsAt: Date()
+                )
+                Task { await existingActivity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: .immediate) }
+            } else {
+                let previous = existingActivity.contentState
+                let finalState = RestActivityAttributes.ContentState(
+                    remainingSeconds: 0,
+                    exerciseName: previous.exerciseName,
+                    startedAt: previous.startedAt,
+                    endsAt: Date()
+                )
+                Task { await existingActivity.end(using: finalState, dismissalPolicy: .immediate) }
+            }
         }
+        
+        // Clear our reference
         self.activity = nil
+        print("🔍 LiveActivity: All activities ended and cleared")
     }
     
-    // Test function to manually trigger Live Activity
-    func testLiveActivity() {
-        print("🧪 Testing Live Activity manually...")
-        startRest(durationSeconds: 30, exerciseName: "Test Exercise", workoutLabel: "Test Workout")
-    }
-    
-    // Simple test function with minimal data
-    func testSimpleLiveActivity() {
-        print("🧪 Testing SIMPLE Live Activity...")
+    // Start a workout session Live Activity (for when app goes to background during workout)
+    func startWorkoutSession(workoutLabel: String?, exerciseName: String?) async {
+        print("🔍 LiveActivity: Starting workout session Live Activity")
+        print("🔍 LiveActivity: Workout: \(workoutLabel ?? "nil")")
+        print("🔍 LiveActivity: Current Exercise: \(exerciseName ?? "nil")")
+        
         guard ActivityAuthorizationInfo().areActivitiesEnabled else { 
             print("❌ LiveActivity: Activities not enabled in system settings")
             return 
         }
         
+        // Check if we already have an active Live Activity
+        if activity != nil {
+            print("🔍 LiveActivity: Already have an active activity, updating instead")
+            // Just update the existing activity with new exercise info
+            await updateWorkoutInfo(exerciseName: exerciseName)
+            return
+        }
+        
+        // Check if there are any existing activities in the system
+        let existingActivities = Activity<RestActivityAttributes>.activities
+        if !existingActivities.isEmpty {
+            print("🔍 LiveActivity: Found \(existingActivities.count) existing activities, ending them first")
+            // End all existing activities first
+            for existingActivity in existingActivities {
+                print("🔍 LiveActivity: Ending existing activity: \(existingActivity.id)")
+                if #available(iOS 16.2, *) {
+                    Task { await existingActivity.end(ActivityContent(state: existingActivity.content.state, staleDate: nil), dismissalPolicy: .immediate) }
+                } else {
+                    Task { await existingActivity.end(using: existingActivity.contentState, dismissalPolicy: .immediate) }
+                }
+            }
+            // Wait a moment for cleanup
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+        }
+        
+        print("🔍 LiveActivity: Creating new activity")
+        
         let start = Date()
-        let end = start.addingTimeInterval(30)
-        let attributes = RestActivityAttributes(workoutLabel: "Simple Test")
+        let end = start.addingTimeInterval(3600) // 1 hour default duration
+        let attributes = RestActivityAttributes(workoutLabel: workoutLabel)
         let state = RestActivityAttributes.ContentState(
-            remainingSeconds: 30,
-            exerciseName: "Simple Test",
+            remainingSeconds: 0, // 0 means no countdown, just showing workout info
+            exerciseName: exerciseName ?? "Workout in Progress",
             startedAt: start,
             endsAt: end
         )
+        
+        print("🔍 LiveActivity: Creating workout session activity")
         
         do {
             if #available(iOS 16.2, *) {
@@ -132,12 +167,36 @@ final class LiveActivityManager {
             } else {
                 activity = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
             }
-            print("✅ SIMPLE LiveActivity: Started successfully! Activity ID: \(activity?.id ?? "unknown")")
+            print("✅ LiveActivity: Workout session started successfully! Activity ID: \(activity?.id ?? "unknown")")
         } catch {
-            print("❌ SIMPLE LiveActivity: Start error: \(error)")
-            print("❌ SIMPLE LiveActivity: Error details: \(error.localizedDescription)")
+            print("❌ LiveActivity: Workout session start error: \(error)")
+            print("❌ LiveActivity: Error details: \(error.localizedDescription)")
         }
     }
+    
+    // Update existing workout Live Activity with new exercise info
+    func updateWorkoutInfo(exerciseName: String?) async {
+        guard let activity = activity else { return }
+        
+        let now = Date()
+        let end = now.addingTimeInterval(3600)
+        let state = RestActivityAttributes.ContentState(
+            remainingSeconds: 0,
+            exerciseName: exerciseName ?? "Workout in Progress",
+            startedAt: now,
+            endsAt: end
+        )
+        
+        Task {
+            if #available(iOS 16.2, *) {
+                await activity.update(ActivityContent(state: state, staleDate: nil))
+            } else {
+                await activity.update(using: state)
+            }
+            print("✅ LiveActivity: Updated workout info with exercise: \(exerciseName ?? "nil")")
+        }
+    }
+    
 }
 
 #else

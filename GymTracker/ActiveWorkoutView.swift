@@ -25,7 +25,7 @@ struct ActiveWorkoutView: View {
     @State private var restSecondsRemaining = 0
     @State private var showRestTimer = false
     @State private var restEndsAt: Date?
-    @State private var showTestAlert = false
+    @State private var hasWorkoutLiveActivity = false
     
     @State private var currentWeight: Double = 0.0
     @State private var currentReps: Int = 0
@@ -84,8 +84,17 @@ struct ActiveWorkoutView: View {
             initializeCurrentExerciseValues()
         }
         .onChange(of: scenePhase) { _, phase in
+            print("🔍 Scene phase changed to: \(phase)")
             switch phase {
             case .active:
+                print("🔍 App became active")
+                // End any workout session Live Activity when app becomes active
+                if currentSession != nil && !showRestTimer {
+                    print("🔍 Ending workout session Live Activity")
+                    LiveActivityManager.shared.endRest()
+                    hasWorkoutLiveActivity = false
+                }
+                
                 if showRestTimer, let endsAt = restEndsAt {
                     let remaining = Int(ceil(endsAt.timeIntervalSinceNow))
                     if remaining <= 0 {
@@ -107,14 +116,29 @@ struct ActiveWorkoutView: View {
                     }
                 }
             case .background, .inactive:
+                print("🔍 App went to background/inactive")
                 // Pause in-memory timer; remaining time is derived from restEndsAt on resume
                 restTimer?.invalidate()
                 restTimer = nil
+                
+                // If we have an active workout but no rest timer, show a workout Live Activity
+                // Only start if we don't already have one running
+                if currentSession != nil && !showRestTimer && !hasWorkoutLiveActivity {
+                    print("🔍 Starting workout Live Activity for background")
+                    hasWorkoutLiveActivity = true
+                    // Add a small delay to avoid rapid successive calls
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        Task {
+                            await LiveActivityManager.shared.startWorkoutSession(workoutLabel: workout?.label, exerciseName: currentExercise?.name)
+                        }
+                    }
+                }
             @unknown default:
                 break
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .restSkipAction)) { _ in
+            print("🔗 Received rest skip notification")
             // Skip: immediately end rest and move to next exercise
             if showRestTimer {
                 stopRestTimer()
@@ -122,22 +146,90 @@ struct ActiveWorkoutView: View {
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .restStopAction)) { _ in
+            print("🔗 Received rest stop notification")
             if showRestTimer {
                 stopRestTimer()
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: .restAddMinuteAction)) { _ in
+            print("🔗 Received rest add minute notification")
+            if showRestTimer {
+                restSecondsRemaining += 60
+                restEndsAt = Date().addingTimeInterval(TimeInterval(restSecondsRemaining))
+                LiveActivityManager.shared.updateRemaining(restSecondsRemaining)
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .nextExerciseAction)) { _ in
+            print("🔗 Received next exercise notification")
             if !showRestTimer {
                 nextExercise()
             }
         }
-        .alert("Test Live Activity", isPresented: $showTestAlert) {
-            Button("OK") { }
-        } message: {
-            Text("Live Activity test triggered! Check console logs and lock screen.")
+        .onReceive(NotificationCenter.default.publisher(for: .logSetAction)) { _ in
+            print("🔗 Received log set notification")
+            // Log current set and move to next
+            logCurrentSet()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .startRestAction)) { _ in
+            print("🔗 Received start rest notification")
+            if !showRestTimer {
+                startRestTimer()
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .finishWorkoutAction)) { _ in
+            print("🔗 Received finish workout notification")
+            completeWorkout()
         }
         .onDisappear {
             stopWorkoutTimer()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UserDefaults.didChangeNotification)) { _ in
+            // Check for widget actions
+            let sharedDefaults = UserDefaults(suiteName: "group.com.gymtracker.shared")
+            if let action = sharedDefaults?.string(forKey: "widget_action"),
+               let timestamp = sharedDefaults?.object(forKey: "widget_action_timestamp") as? Date {
+                
+                // Only process recent actions (within last 5 seconds)
+                if Date().timeIntervalSince(timestamp) < 5.0 {
+                    print("🔗 Received widget action: \(action)")
+                    
+                    switch action {
+                    case "rest_skip":
+                        if showRestTimer {
+                            stopRestTimer()
+                            nextExercise()
+                        }
+                    case "rest_stop":
+                        if showRestTimer {
+                            stopRestTimer()
+                        }
+                    case "rest_add_minute":
+                        if showRestTimer {
+                            restSecondsRemaining += 60
+                            restEndsAt = Date().addingTimeInterval(TimeInterval(restSecondsRemaining))
+                            LiveActivityManager.shared.updateRemaining(restSecondsRemaining)
+                        }
+                    case "log_set":
+                        logCurrentSet()
+                    case "next_exercise":
+                        if !showRestTimer {
+                            nextExercise()
+                        }
+                    case "start_rest":
+                        if !showRestTimer {
+                            startRestTimer()
+                        }
+                    case "finish_workout":
+                        completeWorkout()
+                    default:
+                        break
+                    }
+                    
+                    // Clear the action to prevent duplicate processing
+                    sharedDefaults?.removeObject(forKey: "widget_action")
+                    sharedDefaults?.removeObject(forKey: "widget_action_timestamp")
+                }
+            }
         }
     }
     
@@ -160,24 +252,6 @@ struct ActiveWorkoutView: View {
                         
                         Spacer()
                 
-                // Test Live Activity button (DEBUG ONLY)
-                Button("🧪") {
-                    print("🧪 Test button tapped!")
-                    print("🧪 About to call testLiveActivity()")
-                    showTestAlert = true
-                    LiveActivityManager.shared.testLiveActivity()
-                    print("🧪 testLiveActivity() called")
-                }
-                .foregroundStyle(.orange)
-                .font(.title2)
-                
-                // Simple test button (DEBUG ONLY)
-                Button("🔬") {
-                    print("🔬 Simple test button tapped!")
-                    LiveActivityManager.shared.testSimpleLiveActivity()
-                }
-                .foregroundStyle(.blue)
-                .font(.title2)
                         
                 Button("שמור") {
                     completeWorkout()
@@ -583,6 +657,43 @@ struct ActiveWorkoutView: View {
         let minutes = seconds / 60
         let remainingSeconds = seconds % 60
         return String(format: "%d:%02d", minutes, remainingSeconds)
+    }
+    
+    // MARK: - Workout Control Functions
+    
+    private func logCurrentSet() {
+        print("🔗 Logging current set from lock screen")
+        guard let exercise = currentExercise, let session = currentSession else {
+            print("❌ No current exercise or session")
+            return
+        }
+        
+        // Find or create exercise session
+        var exerciseSession = session.exerciseSessions.first { $0.exerciseName == exercise.name }
+        if exerciseSession == nil {
+            exerciseSession = ExerciseSession(
+                exerciseName: exercise.name,
+                setLogs: []
+            )
+            session.exerciseSessions.append(exerciseSession!)
+        }
+        
+        // Add set log
+        let setLog = SetLog(
+            reps: currentReps,
+            weight: currentWeight
+        )
+        exerciseSession!.setLogs.append(setLog)
+        
+        // Save changes
+        try? modelContext.save()
+        
+        print("✅ Set logged: \(currentWeight)kg x \(currentReps) reps")
+        
+        // Update Live Activity with new exercise info (don't start new session, just update)
+        Task {
+            await LiveActivityManager.shared.updateWorkoutInfo(exerciseName: exercise.name)
+        }
     }
 
     // MARK: - Legacy Functions (keeping existing workout logic)

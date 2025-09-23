@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import AppIntents
 
 @main
 struct GymTrackerApp: App {
@@ -156,14 +157,41 @@ struct GymTrackerApp: App {
                     guard url.scheme?.lowercased() == "gymtracker" else { return }
                     let host = (url.host ?? "").lowercased()
                     let path = url.path.lowercased()
+                    print("🔗 URL received: \(url)")
+                    
                     switch (host, path) {
+                    // Rest timer controls
                     case ("rest", "/skip"):
+                        print("🔗 Rest skip action")
                         NotificationCenter.default.post(name: .restSkipAction, object: nil)
                     case ("rest", "/stop"):
+                        print("🔗 Rest stop action")
                         NotificationCenter.default.post(name: .restStopAction, object: nil)
+                    case ("rest", "/addminute"):
+                        print("🔗 Rest add minute action")
+                        NotificationCenter.default.post(name: .restAddMinuteAction, object: nil)
+                    
+                    // Exercise controls
                     case ("exercise", "/next"):
+                        print("🔗 Next exercise action")
                         NotificationCenter.default.post(name: .nextExerciseAction, object: nil)
+                    
+                    // Workout session controls
+                    case ("workout", "/logset"):
+                        print("🔗 Log set action")
+                        NotificationCenter.default.post(name: .logSetAction, object: nil)
+                    case ("workout", "/nextexercise"):
+                        print("🔗 Next exercise action")
+                        NotificationCenter.default.post(name: .nextExerciseAction, object: nil)
+                    case ("workout", "/startrest"):
+                        print("🔗 Start rest action")
+                        NotificationCenter.default.post(name: .startRestAction, object: nil)
+                    case ("workout", "/finish"):
+                        print("🔗 Finish workout action")
+                        NotificationCenter.default.post(name: .finishWorkoutAction, object: nil)
+                    
                     default:
+                        print("🔗 Unknown URL: \(host)\(path)")
                         break
                     }
                 }
