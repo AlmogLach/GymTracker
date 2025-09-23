@@ -478,6 +478,7 @@ struct ActiveWorkoutView: View {
         restTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             if restSecondsRemaining > 0 {
                 restSecondsRemaining -= 1
+                LiveActivityManager.shared.updateRemaining(restSecondsRemaining)
             } else {
                 stopRestTimer()
             }
@@ -485,6 +486,7 @@ struct ActiveWorkoutView: View {
         // Schedule lock-screen notification for rest end
         NotificationManager.shared.cancelRestEndNotification()
         NotificationManager.shared.scheduleRestEndNotification(after: restSecondsRemaining, exerciseName: currentExercise?.name)
+        LiveActivityManager.shared.startRest(durationSeconds: restSecondsRemaining, exerciseName: currentExercise?.name, workoutLabel: workout?.workoutLabel)
     }
     
     private func stopRestTimer() {
@@ -492,6 +494,7 @@ struct ActiveWorkoutView: View {
         restTimer = nil
         showRestTimer = false
         NotificationManager.shared.cancelRestEndNotification()
+        LiveActivityManager.shared.endRest()
     }
 
     private func formatTime(_ seconds: Int) -> String {
