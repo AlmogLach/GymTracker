@@ -562,58 +562,114 @@ struct EditPlanSheet: View {
     }
 
     private var headerSection: some View {
-        VStack(spacing: AppTheme.s16) {
-                    ZStack {
-                        Circle()
-                    .fill(AppTheme.accent.opacity(0.1))
-                    .frame(width: 80, height: 80)
-                        
-                        Image(systemName: "list.bullet.rectangle.fill")
+        VStack(spacing: AppTheme.s20) {
+            // Plan Icon with gradient background
+            ZStack {
+                LinearGradient(
+                    colors: [Color.blue, Color.blue.opacity(0.7)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .frame(width: 80, height: 80)
+                .clipShape(RoundedRectangle(cornerRadius: 20))
+
+                Image(systemName: "doc.text.fill")
                     .font(.system(size: 32, weight: .bold))
-                    .foregroundStyle(AppTheme.accent)
+                    .foregroundStyle(.white)
             }
 
+            // Plan Info
             VStack(spacing: AppTheme.s8) {
-                Text("עריכת תוכנית")
-                    .font(.system(size: 22, weight: .bold, design: .rounded))
-
-                Text("ערוך את פרטי התוכנית, תרגילים ולוח זמנים")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                Text(planName.isEmpty ? "עריכת תוכנית" : planName)
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
                     .multilineTextAlignment(.center)
+
+                HStack(spacing: AppTheme.s12) {
+                    // Plan Type Badge
+                    HStack(spacing: 6) {
+                        Image(systemName: "target")
+                            .font(.caption)
+                        Text(planType.rawValue)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.blue.opacity(0.1))
+                    .foregroundStyle(Color.blue)
+                    .clipShape(Capsule())
+
+                    // Exercises Count Badge
+                    HStack(spacing: 6) {
+                        Image(systemName: "dumbbell.fill")
+                            .font(.caption)
+                        Text("\(exercises.count) תרגילים")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.green.opacity(0.1))
+                    .foregroundStyle(Color.green)
+                    .clipShape(Capsule())
+                }
             }
         }
         .frame(maxWidth: .infinity)
         .padding(AppTheme.s24)
-        .background(AppTheme.cardBG)
+        .background(
+            LinearGradient(
+                colors: [Color(.secondarySystemBackground), Color(.tertiarySystemBackground)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
     }
 
     private var tabBar: some View {
-        HStack(spacing: AppTheme.s8) {
+        HStack(spacing: 0) {
             ForEach(EditTab.allCases, id: \.self) { tab in
                 Button(action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         selectedTab = tab
                     }
                 }) {
-                    HStack(spacing: AppTheme.s8) {
-                        Image(systemName: tab.icon)
-                            .font(.system(size: 16, weight: .semibold))
+                    VStack(spacing: AppTheme.s8) {
+                        // Icon with background
+                        ZStack {
+                            Circle()
+                                .fill(selectedTab == tab ? tab.color : Color.clear)
+                                .frame(width: 40, height: 40)
+
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 18, weight: .bold))
+                                .foregroundStyle(selectedTab == tab ? .white : .secondary)
+                        }
+
+                        // Tab Label
                         Text(tab.rawValue)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(selectedTab == tab ? tab.color : .secondary)
                     }
+                    .frame(maxWidth: .infinity)
                     .padding(.vertical, AppTheme.s12)
-                    .padding(.horizontal, AppTheme.s16)
-                    .background(selectedTab == tab ? tab.color.opacity(0.2) : Color.clear)
-                    .foregroundStyle(selectedTab == tab ? tab.color : AppTheme.secondary)
-                    .clipShape(Capsule())
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(selectedTab == tab ? tab.color.opacity(0.1) : Color.clear)
+                    )
                 }
                 .buttonStyle(.plain)
             }
         }
         .padding(.horizontal, AppTheme.s16)
-        .padding(.vertical, AppTheme.s12)
-        .background(AppTheme.cardBG)
+        .padding(.vertical, AppTheme.s16)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
+        .padding(.horizontal, AppTheme.s16)
+        .padding(.bottom, AppTheme.s8)
     }
 
     @ViewBuilder
@@ -642,16 +698,31 @@ struct EditPlanSheet: View {
 
     private var exercisesTab: some View {
         VStack(spacing: 0) {
-            exerciseToolbar
+            // Fixed toolbar with proper spacing
+            VStack(spacing: 0) {
+                exerciseToolbar
+                    .padding(.horizontal, AppTheme.s16)
+                    .padding(.vertical, AppTheme.s12)
+                    .background(AppTheme.screenBG)
 
+                Divider()
+                    .background(Color(.separator))
+            }
+
+            // Scrollable content
             if exercises.isEmpty {
                 emptyExercisesView
             } else {
-                if planType == .fullBody {
-                    exercisesList
-                } else {
-                    segmentedExerciseLists
+                ScrollView {
+                    if planType == .fullBody {
+                        exercisesList
+                            .padding(.top, AppTheme.s16)
+                    } else {
+                        segmentedExerciseLists
+                            .padding(.top, AppTheme.s16)
+                    }
                 }
+                .background(AppTheme.screenBG)
             }
         }
     }
@@ -673,63 +744,117 @@ struct EditPlanSheet: View {
 
     private var planInfoCard: some View {
         VStack(alignment: .leading, spacing: AppTheme.s20) {
+            // Header with icon
             HStack {
-                Text("פרטי התוכנית")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
-                    
-                Spacer()
+                HStack(spacing: AppTheme.s12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.blue.opacity(0.1))
+                            .frame(width: 40, height: 40)
 
-                Image(systemName: "info.circle")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
+                        Image(systemName: "info.circle.fill")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(Color.blue)
+                    }
 
-            VStack(alignment: .leading, spacing: AppTheme.s8) {
-                Text("שם התוכנית")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.primary)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("פרטי התוכנית")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
 
-                TextField("שם התוכנית", text: $planName)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(size: 16))
-                    .padding(AppTheme.s16)
-                    .background(AppTheme.cardBG)
-                    .cornerRadius(16)
+                        Text("שם וסוג התוכנית")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
-                .padding(20)
-        .background(AppTheme.cardBG)
+
+                Spacer()
+            }
+
+            // Plan Name Field
+            VStack(alignment: .leading, spacing: AppTheme.s12) {
+                HStack {
+                    Text("שם התוכנית")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    if !planName.isEmpty {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.caption)
+                                .foregroundStyle(Color.green)
+
+                            Text("תקין")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(Color.green)
+                        }
+                    }
+                }
+
+                TextField("הזן שם לתוכנית...", text: $planName)
+                    .font(.system(size: 16, weight: .medium))
+                    .padding(AppTheme.s16)
+                    .background(Color(.tertiarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(planName.isEmpty ? Color.red.opacity(0.3) : Color.green.opacity(0.3), lineWidth: 1)
+                    )
+            }
+        }
+        .padding(AppTheme.s20)
+        .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
 
     private var planTypeCard: some View {
         VStack(alignment: .leading, spacing: AppTheme.s20) {
+            // Header with icon
             HStack {
-                Text("סוג התוכנית")
-                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                HStack(spacing: AppTheme.s12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.orange.opacity(0.1))
+                            .frame(width: 40, height: 40)
+
+                        Image(systemName: "target")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(Color.orange)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("סוג התוכנית")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+
+                        Text("בחר את סגנון האימון המתאים")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
 
                 Spacer()
-
-                Image(systemName: "dumbbell.fill")
-                    .font(.system(size: 16, weight: .medium))
-                            .foregroundStyle(.secondary)
             }
 
+            // Plan Type Options
             VStack(spacing: AppTheme.s12) {
                 ForEach(PlanType.allCases, id: \.self) { type in
-                    PlanTypeRow(
+                    ModernPlanTypeRow(
                         type: type,
                         isSelected: planType == type,
                         onSelect: { planType = type }
                     )
                 }
-                }
             }
-            .padding(20)
-        .background(AppTheme.cardBG)
+        }
+        .padding(AppTheme.s20)
+        .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
     
     private var exerciseToolbar: some View {
@@ -782,18 +907,45 @@ struct EditPlanSheet: View {
 
     // Show A/B/C segmented lists
     private var segmentedExerciseLists: some View {
-        VStack(spacing: AppTheme.s16) {
+        LazyVStack(spacing: AppTheme.s24) {
             ForEach(planType.workoutLabels, id: \.self) { label in
-                VStack(alignment: .leading, spacing: AppTheme.s8) {
+                VStack(alignment: .leading, spacing: AppTheme.s16) {
+                    // Section Header
                     HStack {
-                        Text("אימון \(label)")
-                            .font(.headline)
+                        HStack(spacing: AppTheme.s8) {
+                            ZStack {
+                                Circle()
+                                    .fill(AppTheme.accent.opacity(0.1))
+                                    .frame(width: 32, height: 32)
+
+                                Text(label)
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(AppTheme.accent)
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("אימון \(label)")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(.primary)
+
+                                Text("\(exercises.filter { ($0.label ?? planType.workoutLabels.first) == label }.count) תרגילים")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
                         Spacer()
                     }
+                    .padding(.horizontal, AppTheme.s20)
+                    .padding(.vertical, AppTheme.s12)
+                    .background(AppTheme.cardBG)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    // Exercise Cards
                     LazyVStack(spacing: AppTheme.s12) {
                         ForEach(exercises.filter { ($0.label ?? planType.workoutLabels.first) == label }) { exercise in
-                            ExerciseRowCard(
-                exercise: exercise,
+                            ModernExerciseRowCard(
+                                exercise: exercise,
                                 onEdit: { editingExercise = exercise },
                                 onDelete: {
                                     exerciseToDelete = exercise
@@ -814,7 +966,9 @@ struct EditPlanSheet: View {
                 }
                 .padding(.horizontal, AppTheme.s16)
             }
-            .padding(.bottom, 100)
+
+            // Bottom spacing
+            Spacer(minLength: 100)
         }
     }
 
@@ -855,129 +1009,278 @@ struct EditPlanSheet: View {
     }
 
     private var exercisesList: some View {
-        ScrollView {
-            LazyVStack(spacing: AppTheme.s12) {
-                ForEach(exercises) { exercise in
-                    ExerciseRowCard(
-                        exercise: exercise,
-                        onEdit: { editingExercise = exercise },
-                        onDelete: {
-                            exerciseToDelete = exercise
-                            showDeleteConfirmation = true
-                        },
-                        labelSelector: planType == .fullBody ? nil : LabelSelector(
-                            labels: planType.workoutLabels,
-                            selected: exercise.label ?? planType.workoutLabels.first ?? "A",
-                            onSelect: { new in
-                                if let idx = exercises.firstIndex(where: { $0.id == exercise.id }) {
-                                    exercises[idx].label = new
-                                }
+        LazyVStack(spacing: AppTheme.s12) {
+            ForEach(exercises) { exercise in
+                ModernExerciseRowCard(
+                    exercise: exercise,
+                    onEdit: { editingExercise = exercise },
+                    onDelete: {
+                        exerciseToDelete = exercise
+                        showDeleteConfirmation = true
+                    },
+                    labelSelector: planType == .fullBody ? nil : LabelSelector(
+                        labels: planType.workoutLabels,
+                        selected: exercise.label ?? planType.workoutLabels.first ?? "A",
+                        onSelect: { new in
+                            if let idx = exercises.firstIndex(where: { $0.id == exercise.id }) {
+                                exercises[idx].label = new
                             }
-                        )
+                        }
                     )
-                }
+                )
             }
-            .padding(.horizontal, AppTheme.s16)
-            .padding(.bottom, 100)
         }
+        .padding(.horizontal, AppTheme.s16)
+        .padding(.bottom, 100)
     }
 
     private var scheduleInfoCard: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s16) {
+        VStack(alignment: .leading, spacing: AppTheme.s20) {
+            // Header with icon
             HStack {
-                Text("לוח זמנים")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                HStack(spacing: AppTheme.s12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.purple.opacity(0.1))
+                            .frame(width: 40, height: 40)
+
+                        Image(systemName: "calendar.badge.clock")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(Color.purple)
+                    }
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("לוח זמנים")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+
+                        Text("תכנן את ימי האימון")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
 
                 Spacer()
 
-                Image(systemName: "calendar")
-                    .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.secondary)
+                // Schedule Status Badge
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(schedule.isEmpty ? Color.orange : Color.green)
+                        .frame(width: 8, height: 8)
+
+                    Text(schedule.isEmpty ? "לא מוגדר" : "\(schedule.count) ימים")
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundStyle(schedule.isEmpty ? Color.orange : Color.green)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background((schedule.isEmpty ? Color.orange : Color.green).opacity(0.1))
+                .clipShape(Capsule())
             }
-                    
-            if schedule.isEmpty {
-                Text("לא הוגדר לוח זמנים לתוכנית זו")
-                    .font(.subheadline)
-                            .foregroundStyle(.secondary)
-            } else {
-                Text("התוכנית מוגדרת עם \(schedule.count) ימי אימון בשבוע")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+
+            // Schedule Description
+            VStack(alignment: .leading, spacing: AppTheme.s8) {
+                if schedule.isEmpty {
+                    Text("📅 לא הוגדר לוח זמנים")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+
+                    Text("הוסף ימי אימון לתוכנית כדי ליצור לוח זמנים מסודר")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("✅ לוח זמנים פעיל")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.primary)
+
+                    Text("התוכנית כוללת \(schedule.count) ימי אימון בשבוע")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
-        .padding(20)
-        .background(AppTheme.cardBG)
+        .padding(AppTheme.s20)
+        .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 4)
     }
 
     private var scheduleDisplayCard: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s16) {
-            Text("ימי אימון")
-                .font(.system(size: 18, weight: .bold))
+        VStack(alignment: .leading, spacing: AppTheme.s20) {
+            // Header with status
+            HStack {
+                VStack(alignment: .leading, spacing: AppTheme.s4) {
+                    Text("ימי אימון")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundStyle(.primary)
 
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: AppTheme.s12) {
-                ForEach(schedule, id: \.weekday) { day in
-                    DayChip(day: day)
+                    HStack(spacing: AppTheme.s8) {
+                        Circle()
+                            .fill(schedule.isEmpty ? AppTheme.warning : AppTheme.success)
+                            .frame(width: 8, height: 8)
+
+                        Text(schedule.isEmpty ? "לא הוגדרו ימי אימון" : "\(schedule.count) ימי אימון")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundStyle(schedule.isEmpty ? AppTheme.warning : AppTheme.success)
+                    }
+                }
+
+                Spacer()
+
+                // Schedule type badge
+                if !schedule.isEmpty {
+                    let uniqueLabels = Set(schedule.map { $0.label }).count
+                    HStack(spacing: AppTheme.s4) {
+                        Image(systemName: uniqueLabels > 1 ? "rectangle.3.group" : "rectangle")
+                            .font(.caption)
+                        Text(uniqueLabels > 1 ? "מחולק" : "מלא")
+                            .font(.caption)
+                            .fontWeight(.medium)
+                    }
+                    .padding(.horizontal, AppTheme.s8)
+                    .padding(.vertical, 4)
+                    .background(AppTheme.info.opacity(0.1))
+                    .foregroundStyle(AppTheme.info)
+                    .clipShape(Capsule())
+                }
+            }
+
+            if schedule.isEmpty {
+                // Empty state
+                VStack(spacing: AppTheme.s12) {
+                    Image(systemName: "calendar.badge.exclamationmark")
+                        .font(.system(size: 32))
+                        .foregroundStyle(AppTheme.warning.opacity(0.6))
+
+                    Text("טרם הוגדרו ימי אימון")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, AppTheme.s24)
+            } else {
+                // Days grid with enhanced styling
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: AppTheme.s12) {
+                    ForEach(schedule, id: \.weekday) { day in
+                        ScheduleDayChip(day: day)
+                    }
                 }
             }
         }
-        .padding(20)
-        .background(AppTheme.cardBG)
+        .padding(AppTheme.s24)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(.secondarySystemBackground),
+                    Color(.secondarySystemBackground).opacity(0.8)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 6)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color(.separator).opacity(0.3), lineWidth: 0.5)
+        )
     }
 
     private var scheduleEditor: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s16) {
-            HStack {
-                Text("בחר אימון")
-                    .font(.system(size: 16, weight: .semibold))
-            Spacer()
+        VStack(alignment: .leading, spacing: AppTheme.s20) {
+            // Header
+            VStack(alignment: .leading, spacing: AppTheme.s4) {
+                Text("עריכת לוח זמנים")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.primary)
+
+                Text("בחר אימון וימים בשבוע")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
-            
-            // Pick which workout (A/B/C or Full) to edit
-            HStack(spacing: AppTheme.s8) {
-                ForEach(planType.workoutLabels, id: \.self) { label in
-                    Button(action: { currentEditingDay = label }) {
-                        Text(label)
-                            .font(.system(size: 14, weight: .semibold))
-                            .padding(.vertical, AppTheme.s8)
-                            .padding(.horizontal, AppTheme.s12)
-                            .background(currentEditingDay == label ? AppTheme.accent.opacity(0.2) : AppTheme.cardBG)
-                            .foregroundStyle(currentEditingDay == label ? AppTheme.accent : .primary)
-                            .clipShape(Capsule())
+
+            // Workout type selector with modern design
+            VStack(alignment: .leading, spacing: AppTheme.s12) {
+                Text("סוג אימון")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.primary)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: AppTheme.s8) {
+                        ForEach(planType.workoutLabels, id: \.self) { label in
+                            ModernWorkoutTypeButton(
+                                label: label,
+                                isSelected: currentEditingDay == label,
+                                onSelect: { currentEditingDay = label }
+                            )
+                        }
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 4)
                 }
             }
 
+            // Weekday selector with modern design
             VStack(alignment: .leading, spacing: AppTheme.s12) {
-                Text("בחר ימים בשבוע")
-                    .font(.system(size: 16, weight: .semibold))
+                HStack {
+                    Text("ימים בשבוע")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.primary)
 
-                // Weekday chips
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: AppTheme.s8) {
+                    Spacer()
+
+                    // Selected days count
+                    let selectedCount = schedule.filter { $0.label == currentEditingDay }.count
+                    if selectedCount > 0 {
+                        HStack(spacing: AppTheme.s4) {
+                            Image(systemName: "calendar")
+                                .font(.caption)
+                            Text("\(selectedCount) ימים")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+                        .padding(.horizontal, AppTheme.s8)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.accent.opacity(0.1))
+                        .foregroundStyle(AppTheme.accent)
+                        .clipShape(Capsule())
+                    }
+                }
+
+                // Enhanced weekday grid
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: AppTheme.s10) {
                     ForEach(1...7, id: \.self) { weekday in
                         let selected = isWeekdaySelected(weekday, for: currentEditingDay)
-                        Button(action: { toggleWeekday(weekday, for: currentEditingDay) }) {
-                            Text(weekdaySymbol(weekday))
-                                .font(.system(size: 14, weight: .semibold))
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, AppTheme.s8)
-                                .background(selected ? AppTheme.accent : AppTheme.cardBG)
-                                .foregroundStyle(selected ? .white : .primary)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-                        .buttonStyle(.plain)
+                        ModernWeekdayButton(
+                            weekday: weekday,
+                            isSelected: selected,
+                            onToggle: { toggleWeekday(weekday, for: currentEditingDay) }
+                        )
                     }
                 }
             }
         }
-        .padding(20)
-        .background(AppTheme.cardBG)
+        .padding(AppTheme.s24)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(.secondarySystemBackground),
+                    Color(.secondarySystemBackground).opacity(0.8)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 6)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color(.separator).opacity(0.3), lineWidth: 0.5)
+        )
     }
 
     private func isWeekdaySelected(_ weekday: Int, for label: String) -> Bool {
@@ -985,10 +1288,48 @@ struct EditPlanSheet: View {
     }
 
     private func toggleWeekday(_ weekday: Int, for label: String) {
-        if let index = schedule.firstIndex(where: { $0.weekday == weekday && $0.label == label }) {
+        if let index = schedule.firstIndex(where: { $0.weekday == weekday }) {
+            // Remove existing day regardless of label
             schedule.remove(at: index)
         } else {
-            schedule.append(PlannedDay(weekday: weekday, label: label))
+            // Add new day with proper cycling label
+            let correctLabel = getCorrectLabelForDay(weekday)
+            schedule.append(PlannedDay(weekday: weekday, label: correctLabel))
+        }
+        // Update all labels after any change
+        updateCyclingLabels()
+    }
+
+    private func getCorrectLabelForDay(_ weekday: Int) -> String {
+        if planType == .fullBody {
+            return planType.workoutLabels.first ?? "Full"
+        }
+
+        // For A/B/C plans, determine position in cycle
+        let sortedDays = schedule.map { $0.weekday }.sorted()
+
+        // Find where this day should be inserted
+        let insertPosition = sortedDays.filter { $0 < weekday }.count
+
+        // Get the label based on cycle position
+        let labelIndex = insertPosition % planType.workoutLabels.count
+        return planType.workoutLabels[labelIndex]
+    }
+
+    private func updateCyclingLabels() {
+        guard planType != .fullBody else { return }
+
+        // Sort all days chronologically
+        let sortedDays = schedule.sorted { $0.weekday < $1.weekday }
+
+        // Update each day with correct cycling label
+        for (index, day) in sortedDays.enumerated() {
+            let labelIndex = index % planType.workoutLabels.count
+            let correctLabel = planType.workoutLabels[labelIndex]
+
+            if let scheduleIndex = schedule.firstIndex(where: { $0.weekday == day.weekday }) {
+                schedule[scheduleIndex].label = correctLabel
+            }
         }
     }
 
@@ -1060,6 +1401,155 @@ struct EditPlanSheet: View {
     }
 }
 
+// MARK: - Modern Helper Components
+
+struct ScheduleDayChip: View {
+    let day: PlannedDay
+
+    var body: some View {
+        VStack(spacing: AppTheme.s4) {
+            Text(weekdaySymbol(day.weekday))
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .foregroundStyle(.primary)
+
+            if !day.label.isEmpty {
+                Text(day.label)
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundStyle(AppTheme.accent)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(AppTheme.accent.opacity(0.1))
+                    .clipShape(Capsule())
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, AppTheme.s10)
+        .background(Color(.tertiarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(AppTheme.accent.opacity(0.2), lineWidth: 1)
+        )
+    }
+
+    private func weekdaySymbol(_ weekday: Int) -> String {
+        switch weekday {
+        case 1: return "א׳"
+        case 2: return "ב׳"
+        case 3: return "ג׳"
+        case 4: return "ד׳"
+        case 5: return "ה׳"
+        case 6: return "ו׳"
+        case 7: return "ש׳"
+        default: return "?"
+        }
+    }
+}
+
+struct ModernWorkoutTypeButton: View {
+    let label: String
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            Text(label)
+                .font(.system(size: 14, weight: .semibold))
+                .padding(.vertical, AppTheme.s10)
+                .padding(.horizontal, AppTheme.s16)
+                .background(
+                    Group {
+                        if isSelected {
+                            LinearGradient(
+                                colors: [AppTheme.accent, AppTheme.accent.opacity(0.8)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        } else {
+                            LinearGradient(
+                                colors: [Color(.tertiarySystemBackground), Color(.tertiarySystemBackground)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        }
+                    }
+                )
+                .foregroundStyle(isSelected ? .white : .primary)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(isSelected ? AppTheme.accent.opacity(0.3) : Color(.separator), lineWidth: 1)
+                )
+                .scaleEffect(isSelected ? 1.05 : 1.0)
+                .shadow(color: isSelected ? AppTheme.accent.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+    }
+}
+
+struct ModernWeekdayButton: View {
+    let weekday: Int
+    let isSelected: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            VStack(spacing: AppTheme.s4) {
+                Text(weekdaySymbol(weekday))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(isSelected ? .white : .primary)
+
+                Circle()
+                    .fill(isSelected ? .white.opacity(0.8) : AppTheme.accent.opacity(0.6))
+                    .frame(width: 4, height: 4)
+                    .opacity(isSelected ? 1 : 0)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, AppTheme.s12)
+            .background(
+                Group {
+                    if isSelected {
+                        LinearGradient(
+                            colors: [AppTheme.accent, AppTheme.accent.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } else {
+                        LinearGradient(
+                            colors: [Color(.tertiarySystemBackground), Color(.tertiarySystemBackground)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    }
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? AppTheme.accent.opacity(0.3) : Color(.separator).opacity(0.5), lineWidth: 1)
+            )
+            .scaleEffect(isSelected ? 1.05 : 1.0)
+            .shadow(color: isSelected ? AppTheme.accent.opacity(0.2) : .clear, radius: 3, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+    }
+
+    private func weekdaySymbol(_ weekday: Int) -> String {
+        switch weekday {
+        case 1: return "א"
+        case 2: return "ב"
+        case 3: return "ג"
+        case 4: return "ד"
+        case 5: return "ה"
+        case 6: return "ו"
+        case 7: return "ש"
+        default: return "?"
+        }
+    }
+}
+
 struct PlanTypeRow: View {
     let type: PlanType
     let isSelected: Bool
@@ -1101,16 +1591,18 @@ struct PlanTypeRow: View {
         }
         .buttonStyle(.plain)
     }
+}
 
-    private func planTypeDescription(_ type: PlanType) -> String {
-        switch type {
-        case .fullBody:
-            return "אימון גוף מלא בכל פעם"
-        case .ab:
-            return "חלוקה לשני אימונים A ו-B"
-        case .abc:
-            return "חלוקה לשלושה אימונים A, B ו-C"
-        }
+// MARK: - Helper Functions
+
+private func planTypeDescription(_ type: PlanType) -> String {
+    switch type {
+    case .fullBody:
+        return "אימון גוף מלא בכל פעם"
+    case .ab:
+        return "חלוקה לשני אימונים A ו-B"
+    case .abc:
+        return "חלוקה לשלושה אימונים A, B ו-C"
     }
 }
 
@@ -1151,7 +1643,7 @@ struct ExerciseRowCard: View {
                     if let muscleGroup = exercise.muscleGroup {
                         PillBadge(text: muscleGroup)
                     }
-                    
+
                     if let selector = labelSelector {
                         Menu {
                             ForEach(selector.labels, id: \.self) { label in
@@ -1189,6 +1681,158 @@ struct ExerciseRowCard: View {
         }
         .padding(AppTheme.s16)
         .background(AppTheme.cardBG)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
+    }
+}
+
+struct ModernPlanTypeRow: View {
+    let type: PlanType
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            HStack(spacing: AppTheme.s16) {
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? AppTheme.accent.opacity(0.2) : .gray.opacity(0.1))
+                        .frame(width: 40, height: 40)
+
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(isSelected ? AppTheme.accent : .gray)
+                }
+
+                VStack(alignment: .leading, spacing: AppTheme.s4) {
+                    Text(type.rawValue)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.primary)
+
+                    Text(planTypeDescription(type))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer()
+            }
+            .padding(AppTheme.s16)
+            .background(isSelected ? AppTheme.accent.opacity(0.05) : AppTheme.cardBG)
+            .cornerRadius(16)
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isSelected ? AppTheme.accent : .clear, lineWidth: 2)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+struct ModernExerciseRowCard: View {
+    let exercise: Exercise
+    let onEdit: () -> Void
+    let onDelete: () -> Void
+    let labelSelector: LabelSelector?
+
+    var body: some View {
+        HStack(spacing: AppTheme.s16) {
+            // Exercise Icon
+            ZStack {
+                Circle()
+                    .fill(Color.blue.opacity(0.1))
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: "dumbbell.fill")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(Color.blue)
+            }
+
+            // Exercise Info
+            VStack(alignment: .leading, spacing: AppTheme.s8) {
+                // Exercise Name
+                Text(exercise.name)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+
+                // Exercise Details
+                HStack(spacing: AppTheme.s12) {
+                    // Sets & Reps
+                    HStack(spacing: 4) {
+                        Text("\(exercise.plannedSets)")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.blue)
+
+                        Text("סטים")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let reps = exercise.plannedReps {
+                        HStack(spacing: 4) {
+                            Text("\(reps)")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(Color.green)
+
+                            Text("חזרות")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+
+                    if let muscleGroup = exercise.muscleGroup, !muscleGroup.isEmpty {
+                        Text(muscleGroup)
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.orange.opacity(0.1))
+                            .foregroundStyle(Color.orange)
+                            .clipShape(Capsule())
+                    }
+                }
+
+                // Label Selector (if available)
+                if let selector = labelSelector {
+                    Menu {
+                        ForEach(selector.labels, id: \.self) { label in
+                            Button(label) { selector.onSelect(label) }
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "tag.fill")
+                                .font(.caption)
+                            Text("אימון \(selector.selected)")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.blue.opacity(0.1))
+                        .foregroundStyle(Color.blue)
+                        .clipShape(Capsule())
+                    }
+                }
+            }
+
+            Spacer()
+
+            // Action Menu
+            Menu {
+                Button("ערוך", action: onEdit)
+                Button("מחק", role: .destructive, action: onDelete)
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .padding(10)
+                    .background(Color(.tertiarySystemBackground))
+                    .clipShape(Circle())
+            }
+        }
+        .padding(AppTheme.s16)
+        .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
     }

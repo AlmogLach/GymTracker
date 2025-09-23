@@ -13,8 +13,8 @@ struct NewPlanSheet: View {
     @Environment(\.modelContext) private var modelContext
     @State private var name: String = ""
     @State private var planType: PlanType = .fullBody
-    @State private var schedule: Set<Int> = []
-    @State private var labelForDay: [Int: String] = [:]
+    @State private var schedule: [PlannedDay] = []
+    @State private var currentEditingDay = "Full"
 
     var body: some View {
         NavigationStack {
@@ -152,8 +152,8 @@ struct NewPlanSheet: View {
                         onSelect: {
                             withAnimation(.easeInOut(duration: 0.3)) {
                                 planType = type
-                                // Update existing labels for new plan type cycling
-                                updateWorkoutLabelsForCycling()
+                                currentEditingDay = planType.workoutLabels.first ?? "Full"
+                                normalizeScheduleForPlanType()
                             }
                         }
                     )
@@ -190,19 +190,13 @@ struct NewPlanSheet: View {
     }
     
     private var modernScheduleSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
+        VStack(alignment: .leading, spacing: AppTheme.s20) {
+            // Header
+            VStack(alignment: .leading, spacing: AppTheme.s4) {
                 Text("לוח זמנים")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                
-                Spacer()
-                
-                Image(systemName: "calendar")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.secondary)
-            }
-            
-            VStack(alignment: .leading, spacing: 8) {
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.primary)
+
                 if planType == .fullBody {
                     Text("בחר את הימים בהם תרצה להתאמן")
                         .font(.subheadline)
@@ -211,33 +205,89 @@ struct NewPlanSheet: View {
                     Text("בחר ימים - האימונים יוקצו אוטומטית בסיבוב \(planType.workoutLabels.joined(separator: " → "))")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    
-                    Text("הסיבוב ימשיך בין השבועות - אם שבוע מסתיים ב-\(planType.workoutLabels.last ?? ""), השבוע הבא מתחיל ב-\(planType.workoutLabels.first ?? "")")
-                        .font(.caption)
-                        .foregroundStyle(.blue)
-                        .padding(.top, 4)
                 }
             }
-            
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
-                ForEach(1...7, id: \.self) { day in
-                    ModernDayChip(
-                        day: day,
-                        isSelected: schedule.contains(day),
-                        planType: planType,
-                        selectedLabel: labelForDay[day],
-                        onToggle: { toggleDay(day) },
-                        onLabelChange: { label in
-                            labelForDay[day] = label
+
+            // Cycling explanation for split plans
+            if planType != .fullBody && !schedule.isEmpty {
+                VStack(alignment: .leading, spacing: AppTheme.s8) {
+                    Text("סיבוב האימונים:")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(AppTheme.info)
+
+                    Text("השבועות ימשיכו את הסיבוב - אם שבוע מסתיים ב-\(planType.workoutLabels.last ?? ""), השבוע הבא מתחיל ב-\(planType.workoutLabels.first ?? "")")
+                        .font(.caption)
+                        .foregroundStyle(AppTheme.info)
+                }
+                .padding(AppTheme.s12)
+                .background(AppTheme.info.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+
+            // Weekday selector with cycling labels
+            VStack(alignment: .leading, spacing: AppTheme.s12) {
+                HStack {
+                    Text("ימים בשבוע")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.primary)
+
+                    Spacer()
+
+                    // Selected days count
+                    if !schedule.isEmpty {
+                        HStack(spacing: AppTheme.s4) {
+                            Image(systemName: "calendar")
+                                .font(.caption)
+                            Text("\(schedule.count) ימים")
+                                .font(.caption)
+                                .fontWeight(.medium)
                         }
-                    )
+                        .padding(.horizontal, AppTheme.s8)
+                        .padding(.vertical, 4)
+                        .background(AppTheme.accent.opacity(0.1))
+                        .foregroundStyle(AppTheme.accent)
+                        .clipShape(Capsule())
+                    }
+                }
+
+                // Enhanced weekday grid with cycling labels
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 7), spacing: AppTheme.s10) {
+                    ForEach(1...7, id: \.self) { weekday in
+                        let isSelected = schedule.contains { $0.weekday == weekday }
+                        let workoutLabel = schedule.first { $0.weekday == weekday }?.label
+
+                        CyclingWeekdayButton(
+                            weekday: weekday,
+                            isSelected: isSelected,
+                            workoutLabel: workoutLabel,
+                            planType: planType,
+                            onToggle: { toggleWeekday(weekday, for: "") }
+                        )
+                    }
                 }
             }
         }
-        .padding(20)
-        .background(Color(.tertiarySystemGroupedBackground))
+        .padding(AppTheme.s24)
+        .background(
+            LinearGradient(
+                colors: [
+                    Color(.secondarySystemBackground),
+                    Color(.secondarySystemBackground).opacity(0.8)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
+        .shadow(color: .black.opacity(0.06), radius: 12, x: 0, y: 6)
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(Color(.separator).opacity(0.3), lineWidth: 0.5)
+        )
+        .onChange(of: planType) {
+            currentEditingDay = planType.workoutLabels.first ?? "Full"
+            normalizeScheduleForPlanType()
+        }
     }
     
     private var planPreviewCard: some View {
@@ -295,18 +345,16 @@ struct NewPlanSheet: View {
                         Text("לוח זמנים שבוע ראשון:")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
-                        
-                        ForEach(schedule.sorted(), id: \.self) { day in
+
+                        ForEach(schedule.sorted(by: { $0.weekday < $1.weekday }), id: \.weekday) { day in
                             HStack {
-                                Text("• \(weekdayName(day))")
+                                Text("• \(weekdayName(day.weekday))")
                                     .font(.caption)
-                                
-                                if let label = labelForDay[day] {
-                                    Text("- \(label)")
-                                        .font(.caption)
-                                        .foregroundStyle(.blue)
-                                }
-                                
+
+                                Text("- \(day.label)")
+                                    .font(.caption)
+                                    .foregroundStyle(.blue)
+
                                 Spacer()
                             }
                         }
@@ -331,51 +379,96 @@ struct NewPlanSheet: View {
         .shadow(color: .black.opacity(0.08), radius: 8, x: 0, y: 4)
     }
     
-    private func toggleDay(_ day: Int) {
-        if schedule.contains(day) {
-            schedule.remove(day)
-            labelForDay.removeValue(forKey: day)
-        } else {
-            schedule.insert(day)
-            if labelForDay[day] == nil {
-                labelForDay[day] = getNextWorkoutLabel(for: day)
-            }
-        }
-        // Recalculate all labels to maintain proper cycling
-        updateWorkoutLabelsForCycling()
+    private func isWeekdaySelected(_ weekday: Int, for label: String) -> Bool {
+        schedule.contains(where: { $0.weekday == weekday && $0.label == label })
     }
-    
-    private func getNextWorkoutLabel(for day: Int) -> String {
+
+    private func toggleWeekday(_ weekday: Int, for label: String) {
+        if let index = schedule.firstIndex(where: { $0.weekday == weekday }) {
+            // Remove existing day regardless of label
+            schedule.remove(at: index)
+        } else {
+            // Add new day with proper cycling label
+            let correctLabel = getCorrectLabelForDay(weekday)
+            schedule.append(PlannedDay(weekday: weekday, label: correctLabel))
+        }
+        // Update all labels after any change
+        updateCyclingLabels()
+    }
+
+    private func getCorrectLabelForDay(_ weekday: Int) -> String {
         if planType == .fullBody {
-            return planType.workoutLabels.first ?? ""
+            return planType.workoutLabels.first ?? "Full"
         }
-        
-        // For AB and ABC plans, cycle through labels based on chronological order
-        let sortedDays = schedule.sorted()
-        guard let dayIndex = sortedDays.firstIndex(of: day) else {
-            return planType.workoutLabels.first ?? ""
-        }
-        
-        let labelIndex = dayIndex % planType.workoutLabels.count
+
+        // For A/B/C plans, determine position in cycle
+        let sortedDays = schedule.map { $0.weekday }.sorted()
+
+        // Find where this day should be inserted
+        let insertPosition = sortedDays.filter { $0 < weekday }.count
+
+        // Get the label based on cycle position
+        let labelIndex = insertPosition % planType.workoutLabels.count
         return planType.workoutLabels[labelIndex]
     }
-    
-    private func updateWorkoutLabelsForCycling() {
-        // Only cycle for AB and ABC plans
+
+    private func updateCyclingLabels() {
         guard planType != .fullBody else { return }
-        
-        let sortedDays = schedule.sorted()
+
+        // Sort all days chronologically
+        let sortedDays = schedule.sorted { $0.weekday < $1.weekday }
+
+        // Update each day with correct cycling label
         for (index, day) in sortedDays.enumerated() {
             let labelIndex = index % planType.workoutLabels.count
-            labelForDay[day] = planType.workoutLabels[labelIndex]
+            let correctLabel = planType.workoutLabels[labelIndex]
+
+            if let scheduleIndex = schedule.firstIndex(where: { $0.weekday == day.weekday }) {
+                schedule[scheduleIndex].label = correctLabel
+            }
+        }
+    }
+
+    private func weekdaySymbol(_ weekday: Int) -> String {
+        switch weekday {
+        case 1: return "א"
+        case 2: return "ב"
+        case 3: return "ג"
+        case 4: return "ד"
+        case 5: return "ה"
+        case 6: return "ו"
+        case 7: return "ש"
+        default: return "?"
         }
     }
     
-    private func savePlan() {
-        let days = schedule.sorted().map { day in 
-            PlannedDay(weekday: day, label: labelForDay[day] ?? planType.workoutLabels.first ?? "") 
+    private func normalizeScheduleForPlanType() {
+        // For Full Body, convert all to single label and deduplicate by weekday
+        if planType == .fullBody, let full = planType.workoutLabels.first {
+            var seen = Set<Int>()
+            var result: [PlannedDay] = []
+            for item in schedule {
+                if !seen.contains(item.weekday) {
+                    seen.insert(item.weekday)
+                    result.append(PlannedDay(weekday: item.weekday, label: full))
+                }
+            }
+            schedule = result
+        } else {
+            // For A/B/C plans, apply proper cycling labels
+            updateCyclingLabels()
         }
-        let plan = WorkoutPlan(name: name, planType: planType, schedule: days)
+
+        // Make sure currentEditingDay is valid
+        let allowed = Set(planType.workoutLabels)
+        if !allowed.contains(currentEditingDay) {
+            currentEditingDay = planType.workoutLabels.first ?? currentEditingDay
+        }
+    }
+
+    private func savePlan() {
+        normalizeScheduleForPlanType()
+        let plan = WorkoutPlan(name: name, planType: planType, schedule: schedule)
         modelContext.insert(plan)
         dismiss()
     }
@@ -522,6 +615,127 @@ struct ModernDayChip: View {
         let symbols = Calendar.current.weekdaySymbols
         let index = max(1, min(7, day)) - 1
         return symbols[index]
+    }
+}
+
+// MARK: - NewPlan Helper Components
+
+struct NewPlanWorkoutTypeButton: View {
+    let label: String
+    let isSelected: Bool
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button(action: onSelect) {
+            Text(label)
+                .font(.system(size: 14, weight: .semibold))
+                .padding(.vertical, AppTheme.s10)
+                .padding(.horizontal, AppTheme.s16)
+                .background(
+                    Group {
+                        if isSelected {
+                            LinearGradient(
+                                colors: [AppTheme.accent, AppTheme.accent.opacity(0.8)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        } else {
+                            LinearGradient(
+                                colors: [Color(.tertiarySystemBackground), Color(.tertiarySystemBackground)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        }
+                    }
+                )
+                .foregroundStyle(isSelected ? .white : .primary)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule()
+                        .stroke(isSelected ? AppTheme.accent.opacity(0.3) : Color(.separator), lineWidth: 1)
+                )
+                .scaleEffect(isSelected ? 1.05 : 1.0)
+                .shadow(color: isSelected ? AppTheme.accent.opacity(0.3) : .clear, radius: 4, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+    }
+}
+
+struct CyclingWeekdayButton: View {
+    let weekday: Int
+    let isSelected: Bool
+    let workoutLabel: String?
+    let planType: PlanType
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            VStack(spacing: AppTheme.s4) {
+                Text(weekdaySymbol(weekday))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(isSelected ? .white : .primary)
+
+                if let label = workoutLabel, planType != .fullBody {
+                    Text(label)
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(isSelected ? .white.opacity(0.9) : AppTheme.accent)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 1)
+                        .background(
+                            isSelected ?
+                            .white.opacity(0.2) :
+                            AppTheme.accent.opacity(0.1)
+                        )
+                        .clipShape(Capsule())
+                } else if !isSelected {
+                    Circle()
+                        .fill(Color.clear)
+                        .frame(width: 4, height: 4)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, AppTheme.s12)
+            .background(
+                Group {
+                    if isSelected {
+                        LinearGradient(
+                            colors: [AppTheme.accent, AppTheme.accent.opacity(0.8)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } else {
+                        LinearGradient(
+                            colors: [Color(.tertiarySystemBackground), Color(.tertiarySystemBackground)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    }
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? AppTheme.accent.opacity(0.3) : Color(.separator).opacity(0.5), lineWidth: 1)
+            )
+            .scaleEffect(isSelected ? 1.05 : 1.0)
+            .shadow(color: isSelected ? AppTheme.accent.opacity(0.2) : .clear, radius: 3, x: 0, y: 2)
+        }
+        .buttonStyle(.plain)
+        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isSelected)
+    }
+
+    private func weekdaySymbol(_ weekday: Int) -> String {
+        switch weekday {
+        case 1: return "א"
+        case 2: return "ב"
+        case 3: return "ג"
+        case 4: return "ד"
+        case 5: return "ה"
+        case 6: return "ו"
+        case 7: return "ש"
+        default: return "?"
+        }
     }
 }
 

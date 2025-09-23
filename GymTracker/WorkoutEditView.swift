@@ -1002,7 +1002,6 @@ struct WorkoutSessionEditSheet: View {
     @State private var notes: String
     @State private var isCompleted: Bool
     @State private var showDeleteConfirmation = false
-    @State private var showExerciseDetails = false
     @State private var selectedExercise: ExerciseSession?
     @State private var showAllExercises = false
     @State private var durationMinutes: Int
@@ -1450,7 +1449,6 @@ struct WorkoutSessionEditSheet: View {
                                 ForEach(session.exerciseSessions, id: \.exerciseName) { exerciseSession in
                                     ExerciseSummaryCard(exerciseSession: exerciseSession) {
                                         selectedExercise = exerciseSession
-                                        showExerciseDetails = true
                                     }
                                 }
                             }
@@ -1604,17 +1602,12 @@ struct WorkoutSessionEditSheet: View {
         } message: {
             Text("האם אתה בטוח שברצונך למחוק את האימון? פעולה זו לא ניתנת לביטול.")
         }
-        .sheet(isPresented: $showExerciseDetails) {
-            if let exercise = selectedExercise {
-                ExerciseDetailsSheet(exerciseSession: exercise)
-                    .onDisappear {
-                        // Clear selection when sheet is dismissed
-                        selectedExercise = nil
-                    }
-            }
+        .sheet(item: $selectedExercise) { exercise in
+            NewExerciseDetailsSheet(exerciseSession: exercise)
+                .id(exercise.exerciseName)
         }
         .sheet(isPresented: $showAllExercises) {
-            AllExercisesSheet(session: session)
+            NewAllExercisesSheet(session: session)
         }
     }
 
@@ -1752,610 +1745,319 @@ struct ExerciseSummaryCard: View {
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: AppTheme.s12) {
-                // Header with exercise name and arrow
+                // Header - Exercise name with clean typography
                 HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(exerciseSession.exerciseName)
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundStyle(AppTheme.primary)
-                            .lineLimit(1)
+                    Text(exerciseSession.exerciseName)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
 
-                        Text("\(exerciseSession.setLogs.count) סטים")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.secondary)
+                    Spacer()
+
+                    Image(systemName: "chevron.backward")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(AppTheme.accent)
+                }
+
+                // Main stats - Clean and prominent
+                HStack(alignment: .top, spacing: AppTheme.s16) {
+                    // Sets count
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("\(exerciseSession.setLogs.count)")
+                            .font(.system(size: 24, weight: .bold, design: .rounded))
+                            .foregroundStyle(AppTheme.accent)
+
+                        Text("סטים")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
                     }
 
                     Spacer()
 
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Image(systemName: "chevron.backward")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.accent)
+                    // Max weight (if available)
+                    if maxWeight > 0 {
+                        VStack(alignment: .trailing, spacing: 2) {
+                            HStack(alignment: .lastTextBaseline, spacing: 2) {
+                                Text("\(String(format: "%.0f", maxWeight))")
+                                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.primary)
 
-                        if maxWeight > 0 {
-                            Text("\(String(format: "%.1f", maxWeight)) ק״ג")
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .foregroundStyle(AppTheme.accent)
+                                Text("ק״ג")
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Text("מקסימום")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.secondary)
                         }
                     }
                 }
 
-                // Stats row with better visual hierarchy
-                HStack(spacing: AppTheme.s16) {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(exerciseSession.setLogs.isEmpty ? AppTheme.error : AppTheme.success)
-                            .frame(width: 8, height: 8)
+                // Status indicator - Subtle at bottom
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(exerciseSession.setLogs.isEmpty ? .orange : .green)
+                        .frame(width: 8, height: 8)
 
-                        Text("\(exerciseSession.setLogs.count) סטים")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(AppTheme.primary)
-                    }
-
-                    if totalVolume > 0 {
-                        HStack(spacing: 4) {
-                            Image(systemName: "scalemass.fill")
-                                .font(.caption2)
-                                .foregroundStyle(AppTheme.info)
-
-                            Text("\(Int(totalVolume)) ק״ג")
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundStyle(AppTheme.secondary)
-                        }
-                    }
+                    Text(exerciseSession.setLogs.isEmpty ? "לא התחיל" : "הושלם")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(exerciseSession.setLogs.isEmpty ? .orange : .green)
 
                     Spacer()
-
-                    // Status indicator
-                    HStack(spacing: 4) {
-                        Image(systemName: exerciseSession.setLogs.isEmpty ? "circle" : "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(exerciseSession.setLogs.isEmpty ? AppTheme.secondary : AppTheme.success)
-
-                        Text(exerciseSession.setLogs.isEmpty ? "לא התחיל" : "הושלם")
-                            .font(.caption2)
-                            .fontWeight(.medium)
-                            .foregroundStyle(exerciseSession.setLogs.isEmpty ? AppTheme.secondary : AppTheme.success)
-                    }
                 }
             }
             .padding(AppTheme.s16)
-            .background(AppTheme.cardBG)
-            .clipShape(RoundedRectangle(cornerRadius: AppTheme.r16))
+            .background(Color(.secondarySystemGroupedBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
-                RoundedRectangle(cornerRadius: AppTheme.r16)
+                RoundedRectangle(cornerRadius: 16)
                     .stroke(
-                        exerciseSession.setLogs.isEmpty ? AppTheme.secondary.opacity(0.2) : AppTheme.success.opacity(0.3),
+                        exerciseSession.setLogs.isEmpty ? Color(.separator) : Color.green.opacity(0.3),
                         lineWidth: 1
                     )
             )
-            .shadow(color: .black.opacity(0.05), radius: 2, x: 0, y: 1)
         }
         .buttonStyle(.plain)
-        .scaleEffect(1.0)
-        .animation(.easeInOut(duration: 0.1), value: exerciseSession.setLogs.count)
     }
 }
 
 struct ExerciseDetailsSheet: View {
     let exerciseSession: ExerciseSession
     @Environment(\.dismiss) private var dismiss
-    @State private var isLoaded = false
 
     private var totalVolume: Double {
-        exerciseSession.setLogs.reduce(0) { $0 + ($1.weight * Double($1.reps)) }
+        exerciseSession.setLogs.reduce(0) { total, setLog in
+            total + (setLog.weight * Double(setLog.reps))
+        }
     }
 
     private var averageRPE: Double {
-        guard !exerciseSession.setLogs.isEmpty else { return 0 }
-        let totalRPE = exerciseSession.setLogs.reduce(0.0) { total, setLog in
-            total + (setLog.rpe ?? 0.0)
-        }
-        return totalRPE / Double(exerciseSession.setLogs.count)
-    }
-    
-    private var headerSection: some View {
-        VStack(spacing: AppTheme.s20) {
-            // Modern exercise header with gradient background
-            VStack(spacing: AppTheme.s16) {
-                // Exercise icon with modern styling
-                ZStack {
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [AppTheme.accent.opacity(0.2), AppTheme.accent.opacity(0.05)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
-                        .frame(width: 90, height: 90)
-                        .overlay(
-                            Circle()
-                                .stroke(AppTheme.accent.opacity(0.3), lineWidth: 2)
-                        )
-
-                    Image(systemName: "dumbbell.fill")
-                        .font(.system(size: 36, weight: .bold))
-                        .foregroundStyle(AppTheme.accent)
-                }
-
-                VStack(spacing: 8) {
-                    Text(exerciseSession.exerciseName)
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
-                        .multilineTextAlignment(.center)
-                        .foregroundStyle(AppTheme.primary)
-
-                    // Status badge
-                    HStack(spacing: 6) {
-                        Circle()
-                            .fill(exerciseSession.setLogs.isEmpty ? AppTheme.warning : AppTheme.success)
-                            .frame(width: 8, height: 8)
-
-                        Text(exerciseSession.setLogs.isEmpty ? "לא התחיל" : "הושלם")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(exerciseSession.setLogs.isEmpty ? AppTheme.warning : AppTheme.success)
-                    }
-                    .padding(.horizontal, AppTheme.s12)
-                    .padding(.vertical, 6)
-                    .background(
-                        (exerciseSession.setLogs.isEmpty ? AppTheme.warning : AppTheme.success).opacity(0.1)
-                    )
-                    .clipShape(Capsule())
-                }
-            }
-
-            // Enhanced stats grid
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: AppTheme.s12) {
-                StatCard(
-                    title: "סטים",
-                    value: "\(exerciseSession.setLogs.count)",
-                    icon: "list.number",
-                    color: AppTheme.accent
-                )
-
-                if totalVolume > 0 {
-                    StatCard(
-                        title: "נפח כולל",
-                        value: "\(Int(totalVolume)) ק״ג",
-                        icon: "scalemass.fill",
-                        color: AppTheme.success
-                    )
-                } else {
-                    StatCard(
-                        title: "נפח כולל",
-                        value: "0 ק״ג",
-                        icon: "scalemass",
-                        color: AppTheme.secondary
-                    )
-                }
-
-                if averageRPE > 0 {
-                    StatCard(
-                        title: "RPE ממוצע",
-                        value: String(format: "%.1f", averageRPE),
-                        icon: "chart.bar.fill",
-                        color: AppTheme.warning
-                    )
-                } else {
-                    StatCard(
-                        title: "RPE ממוצע",
-                        value: "N/A",
-                        icon: "chart.bar",
-                        color: AppTheme.secondary
-                    )
-                }
-            }
-        }
-        .padding(AppTheme.s24)
-        .background(
-            LinearGradient(
-                colors: [AppTheme.cardBG, AppTheme.background],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
-        .clipShape(RoundedRectangle(cornerRadius: 24))
-        .shadow(color: .black.opacity(0.08), radius: 6, x: 0, y: 3)
-    }
-    
-    private var setsSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("סטים")
-                        .font(.headline)
-                        .fontWeight(.bold)
-
-                    if !exerciseSession.setLogs.isEmpty {
-                        Text("רישום מפורט של הביצוע")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.secondary)
-                    }
-                }
-
-                Spacer()
-
-                if !exerciseSession.setLogs.isEmpty {
-                    Text("\(exerciseSession.setLogs.count) סטים")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(AppTheme.accent)
-                        .padding(.horizontal, AppTheme.s8)
-                        .padding(.vertical, 4)
-                        .background(AppTheme.accent.opacity(0.1))
-                        .clipShape(Capsule())
-                }
-            }
-
-            if exerciseSession.setLogs.isEmpty {
-                EmptyStateView(
-                    iconSystemName: "list.number",
-                    title: "אין סטים",
-                    message: "לא נרשמו סטים לתרגיל זה",
-                    buttonTitle: nil
-                ) {}
-                .padding(.vertical, AppTheme.s16)
-            } else {
-                LazyVStack(spacing: AppTheme.s12) {
-                    ForEach(Array(exerciseSession.setLogs.enumerated()), id: \.offset) { index, setLog in
-                        SetDetailRow(
-                            setNumber: index + 1,
-                            reps: setLog.reps,
-                            weight: setLog.weight,
-                            rpe: setLog.rpe ?? 0.0
-                        )
-                    }
-                }
-            }
-        }
-        .padding(20)
-        .background(AppTheme.cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-    }
-    
-    private var statisticsSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("סטטיסטיקות")
-                        .font(.headline)
-                        .fontWeight(.bold)
-
-                    Text("נתונים מפורטים על הביצוע")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.secondary)
-                }
-
-                Spacer()
-
-                // Performance indicator
-                if !exerciseSession.setLogs.isEmpty {
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(AppTheme.success)
-                            .frame(width: 8, height: 8)
-
-                        Text("בוצע")
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundStyle(AppTheme.success)
-                    }
-                    .padding(.horizontal, AppTheme.s8)
-                    .padding(.vertical, 4)
-                    .background(AppTheme.success.opacity(0.1))
-                    .clipShape(Capsule())
-                }
-            }
-
-            LazyVGrid(columns: [
-                GridItem(.flexible()),
-                GridItem(.flexible()),
-                GridItem(.flexible())
-            ], spacing: AppTheme.s12) {
-                StatCard(
-                    title: "סטים",
-                    value: "\(exerciseSession.setLogs.count)",
-                    icon: "list.number",
-                    color: AppTheme.accent
-                )
-
-                StatCard(
-                    title: "נפח כולל",
-                    value: "\(Int(totalVolume)) ק״ג",
-                    icon: "scalemass.fill",
-                    color: AppTheme.success
-                )
-
-                StatCard(
-                    title: "RPE ממוצע",
-                    value: String(format: "%.1f", averageRPE),
-                    icon: "chart.bar.fill",
-                    color: AppTheme.warning
-                )
-            }
-        }
-        .padding(20)
-        .background(AppTheme.cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
+        let rpeValues = exerciseSession.setLogs.compactMap { $0.rpe }
+        guard !rpeValues.isEmpty else { return 0 }
+        return rpeValues.reduce(0, +) / Double(rpeValues.count)
     }
 
-    private var quickOverviewSection: some View {
-        LazyVGrid(columns: [
-            GridItem(.flexible()),
-            GridItem(.flexible())
-        ], spacing: AppTheme.s12) {
-            // Best set card
-            VStack(spacing: AppTheme.s8) {
-                HStack {
-                    Image(systemName: "crown.fill")
-                        .font(.title3)
-                        .foregroundStyle(AppTheme.warning)
-
-                    Text("הסט הטוב ביותר")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(AppTheme.secondary)
-
-                    Spacer()
-                }
-
-                if let bestSet = exerciseSession.setLogs.max(by: { $0.weight < $1.weight }) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(String(format: "%.1f", bestSet.weight)) ק״ג")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(AppTheme.primary)
-
-                        Text("\(bestSet.reps) חזרות")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.secondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    Text("אין נתונים")
-                        .font(.subheadline)
-                        .foregroundStyle(AppTheme.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-            .padding(AppTheme.s16)
-            .background(AppTheme.warning.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(AppTheme.warning.opacity(0.2), lineWidth: 1)
-            )
-
-            // Most volume set card
-            VStack(spacing: AppTheme.s8) {
-                HStack {
-                    Image(systemName: "scalemass.fill")
-                        .font(.title3)
-                        .foregroundStyle(AppTheme.success)
-
-                    Text("נפח גבוה ביותר")
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundStyle(AppTheme.secondary)
-
-                    Spacer()
-                }
-
-                if let volumeSet = exerciseSession.setLogs.max(by: { ($0.weight * Double($0.reps)) < ($1.weight * Double($1.reps)) }) {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("\(Int(volumeSet.weight * Double(volumeSet.reps))) ק״ג")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundStyle(AppTheme.primary)
-
-                        Text("\(volumeSet.reps) × \(String(format: "%.1f", volumeSet.weight))")
-                            .font(.caption)
-                            .foregroundStyle(AppTheme.secondary)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                } else {
-                    Text("אין נתונים")
-                        .font(.subheadline)
-                        .foregroundStyle(AppTheme.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-            .padding(AppTheme.s16)
-            .background(AppTheme.success.opacity(0.05))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(AppTheme.success.opacity(0.2), lineWidth: 1)
-            )
-        }
-    }
-
-    private var performanceInsightsSection: some View {
-        VStack(alignment: .leading, spacing: AppTheme.s16) {
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("תובנות ביצוע")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundStyle(AppTheme.primary)
-
-                    Text("ניתוח מתקדם של הביצוע")
-                        .font(.caption)
-                        .foregroundStyle(AppTheme.secondary)
-                }
-
-                Spacer()
-
-                Image(systemName: "chart.line.uptrend.xyaxis")
-                    .font(.title3)
-                    .foregroundStyle(AppTheme.info)
-            }
-
-            if !exerciseSession.setLogs.isEmpty {
-                VStack(spacing: AppTheme.s12) {
-                    // RPE distribution
-                    VStack(alignment: .leading, spacing: AppTheme.s8) {
-                        Text("רמת קושי (RPE)")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(AppTheme.primary)
-
-                        let rpeCategories = categorizeRPE()
-                        LazyVGrid(columns: [
-                            GridItem(.flexible()),
-                            GridItem(.flexible()),
-                            GridItem(.flexible())
-                        ], spacing: AppTheme.s8) {
-                            RPECategoryCard(title: "קל", count: rpeCategories.easy, color: AppTheme.success)
-                            RPECategoryCard(title: "בינוני", count: rpeCategories.moderate, color: AppTheme.warning)
-                            RPECategoryCard(title: "קשה", count: rpeCategories.hard, color: AppTheme.error)
-                        }
-                    }
-
-                    Divider()
-                        .foregroundStyle(AppTheme.secondary.opacity(0.3))
-
-                    // Volume progression
-                    HStack {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("התקדמות נפח")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(AppTheme.primary)
-
-                            Text("סה״כ נפח באימון זה")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.secondary)
-                        }
-
-                        Spacer()
-
-                        VStack(alignment: .trailing, spacing: 2) {
-                            Text("\(Int(totalVolume))")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundStyle(AppTheme.accent)
-
-                            Text("ק״ג נפח")
-                                .font(.caption)
-                                .foregroundStyle(AppTheme.secondary)
-                        }
-                    }
-                }
-            } else {
-                EmptyStateView(
-                    iconSystemName: "chart.bar",
-                    title: "אין נתוני ביצוע",
-                    message: "תובנות יוצגו כאשר יירשמו סטים",
-                    buttonTitle: nil
-                ) {}
-                .padding(.vertical, AppTheme.s8)
-            }
-        }
-        .padding(AppTheme.s20)
-        .background(AppTheme.cardBG)
-        .clipShape(RoundedRectangle(cornerRadius: 20))
-        .shadow(color: .black.opacity(0.05), radius: 4, x: 0, y: 2)
-    }
-
-    private func categorizeRPE() -> (easy: Int, moderate: Int, hard: Int) {
-        let rpeCounts = exerciseSession.setLogs.reduce((easy: 0, moderate: 0, hard: 0)) { result, setLog in
-            let rpe = setLog.rpe ?? 0.0
-            switch rpe {
-            case 0..<6:
-                return (result.easy + 1, result.moderate, result.hard)
-            case 6..<8:
-                return (result.easy, result.moderate + 1, result.hard)
-            case 8...:
-                return (result.easy, result.moderate, result.hard + 1)
-            default:
-                return result
-            }
-        }
-        return rpeCounts
+    private var maxWeight: Double {
+        exerciseSession.setLogs.map { $0.weight }.max() ?? 0
     }
 
     var body: some View {
         NavigationStack {
-            Group {
-                if isLoaded {
-                    ScrollView {
-                        VStack(spacing: AppTheme.s16) {
-                            // Modern header section
-                            headerSection
+            ScrollView {
+                VStack(spacing: 20) {
+                    // Header Card
+                    VStack(spacing: 16) {
+                        // Exercise Icon
+                        ZStack {
+                            Circle()
+                                .fill(Color.blue.opacity(0.1))
+                                .frame(width: 80, height: 80)
 
-                            // Quick overview cards
-                            quickOverviewSection
-
-                            // Sets detailed view
-                            setsSection
-
-                            // Enhanced statistics
-                            statisticsSection
-
-                            // Performance insights
-                            performanceInsightsSection
-
-                            Spacer(minLength: 20)
+                            Image(systemName: "dumbbell.fill")
+                                .font(.system(size: 30, weight: .bold))
+                                .foregroundStyle(Color.blue)
                         }
-                        .padding(.horizontal, AppTheme.s16)
-                        .padding(.bottom, AppTheme.s24)
-                    }
-                } else {
-                    // Loading state
-                    VStack(spacing: AppTheme.s16) {
-                        ProgressView()
-                            .scaleEffect(1.2)
 
-                        Text("טוען פרטי תרגיל...")
-                            .font(.subheadline)
-                            .foregroundStyle(AppTheme.secondary)
+                        // Exercise Name
+                        Text(exerciseSession.exerciseName)
+                            .font(.title2)
+                            .fontWeight(.bold)
+                            .multilineTextAlignment(.center)
+
+                        // Status Badge
+                        HStack(spacing: 6) {
+                            Circle()
+                                .fill(exerciseSession.setLogs.isEmpty ? Color.orange : Color.green)
+                                .frame(width: 8, height: 8)
+
+                            Text(exerciseSession.setLogs.isEmpty ? "לא התחיל" : "הושלם")
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundStyle(exerciseSession.setLogs.isEmpty ? Color.orange : Color.green)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background((exerciseSession.setLogs.isEmpty ? Color.orange : Color.green).opacity(0.1))
+                        .clipShape(Capsule())
                     }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .padding(20)
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                    // Stats Cards
+                    LazyVGrid(columns: [
+                        GridItem(.flexible()),
+                        GridItem(.flexible()),
+                        GridItem(.flexible())
+                    ], spacing: 12) {
+                        // Sets Count
+                        VStack(spacing: 8) {
+                            Text("\(exerciseSession.setLogs.count)")
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundStyle(Color.blue)
+
+                            Text("סטים")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.tertiarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                        // Total Volume
+                        VStack(spacing: 8) {
+                            Text("\(Int(totalVolume))")
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundStyle(Color.green)
+
+                            Text("ק״ג נפח")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.tertiarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                        // Average RPE
+                        VStack(spacing: 8) {
+                            Text(averageRPE > 0 ? String(format: "%.1f", averageRPE) : "-")
+                                .font(.title)
+                                .fontWeight(.bold)
+                                .foregroundStyle(Color.orange)
+
+                            Text("RPE ממוצע")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color(.tertiarySystemBackground))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+
+                    // Sets List
+                    VStack(alignment: .leading, spacing: 16) {
+                        HStack {
+                            Text("סטים")
+                                .font(.headline)
+                                .fontWeight(.bold)
+
+                            Spacer()
+
+                            if !exerciseSession.setLogs.isEmpty {
+                                Text("\(exerciseSession.setLogs.count) סטים")
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                                    .foregroundStyle(Color.blue)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 4)
+                                    .background(Color.blue.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
+                        }
+
+                        if exerciseSession.setLogs.isEmpty {
+                            VStack(spacing: 12) {
+                                Image(systemName: "list.number")
+                                    .font(.largeTitle)
+                                    .foregroundStyle(.secondary)
+
+                                Text("אין סטים")
+                                    .font(.headline)
+                                    .fontWeight(.bold)
+
+                                Text("לא נרשמו סטים לתרגיל זה")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 24)
+                        } else {
+                            VStack(spacing: 12) {
+                                ForEach(Array(exerciseSession.setLogs.enumerated()), id: \.offset) { index, setLog in
+                                    HStack(spacing: 16) {
+                                        // Set Number
+                                        ZStack {
+                                            Circle()
+                                                .fill(Color.blue)
+                                                .frame(width: 32, height: 32)
+
+                                            Text("\(index + 1)")
+                                                .font(.caption)
+                                                .fontWeight(.bold)
+                                                .foregroundStyle(.white)
+                                        }
+
+                                        // Set Details
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            HStack(spacing: 8) {
+                                                if setLog.weight > 0 {
+                                                    Text("\(String(format: "%.1f", setLog.weight)) ק״ג")
+                                                        .font(.subheadline)
+                                                        .fontWeight(.medium)
+                                                }
+
+                                                if setLog.reps > 0 {
+                                                    Text("× \(setLog.reps)")
+                                                        .font(.subheadline)
+                                                        .foregroundStyle(.secondary)
+                                                }
+                                            }
+
+                                            if let rpe = setLog.rpe, rpe > 0 {
+                                                Text("RPE \(rpe)")
+                                                    .font(.caption)
+                                                    .fontWeight(.medium)
+                                                    .foregroundStyle(Color.blue)
+                                            }
+                                        }
+
+                                        Spacer()
+
+                                        // Volume for this set
+                                        if setLog.weight > 0 && setLog.reps > 0 {
+                                            VStack(alignment: .trailing, spacing: 2) {
+                                                Text(String(format: "%.0f", setLog.weight * Double(setLog.reps)))
+                                                    .font(.subheadline)
+                                                    .fontWeight(.semibold)
+
+                                                Text("ק״ג")
+                                                    .font(.caption2)
+                                                    .foregroundStyle(.secondary)
+                                            }
+                                        }
+                                    }
+                                    .padding(12)
+                                    .background(Color(.secondarySystemBackground))
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+                            }
+                        }
+                    }
+                    .padding(20)
+                    .background(Color(.secondarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
+                .padding(16)
             }
-            .background(AppTheme.screenBG)
+            .background(Color(.systemGroupedBackground))
             .navigationTitle("פרטי תרגיל")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
+                ToolbarItem(placement: .topBarTrailing) {
                     Button("סגור") {
                         dismiss()
                     }
-                    .foregroundStyle(AppTheme.secondary)
                 }
-
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: {}) {
-                        Image(systemName: "square.and.arrow.up")
-                            .font(.title3)
-                            .foregroundStyle(AppTheme.accent)
-                    }
-                }
-            }
-            .onAppear {
-                // Small delay to ensure proper state initialization
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    withAnimation(.easeInOut(duration: 0.3)) {
-                        isLoaded = true
-                    }
-                }
-            }
-            .onDisappear {
-                // Reset state when sheet is dismissed
-                isLoaded = false
             }
         }
-        .id(exerciseSession.exerciseName) // Force view refresh when exercise changes
     }
 }
 
@@ -2499,8 +2201,8 @@ struct RPECategoryCard: View {
 struct AllExercisesSheet: View {
     let session: WorkoutSession
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedExercise: ExerciseSession?
-    @State private var showExerciseDetails = false
+    @State private var selectedAllExercise: ExerciseSession?
+    @State private var showAllExerciseDetails = false
 
     private var totalSets: Int {
         session.exerciseSessions.reduce(0) { $0 + $1.setLogs.count }
@@ -2605,8 +2307,8 @@ struct AllExercisesSheet: View {
                                         exerciseSession: exerciseSession,
                                         index: index + 1,
                                         onTap: {
-                                            selectedExercise = exerciseSession
-                                            showExerciseDetails = true
+                                            selectedAllExercise = exerciseSession
+                                            showAllExerciseDetails = true
                                         }
                                     )
                                 }
@@ -2635,13 +2337,15 @@ struct AllExercisesSheet: View {
                 }
             }
         }
-        .sheet(isPresented: $showExerciseDetails) {
-            if let exercise = selectedExercise {
-                ExerciseDetailsSheet(exerciseSession: exercise)
-                    .onDisappear {
-                        // Clear selection when sheet is dismissed
-                        selectedExercise = nil
-                    }
+        .fullScreenCover(isPresented: $showAllExerciseDetails) {
+            if let exercise = selectedAllExercise {
+                NavigationStack {
+                    ExerciseDetailsSheet(exerciseSession: exercise)
+                        .onDisappear {
+                            // Clear selection when sheet is dismissed
+                            selectedAllExercise = nil
+                        }
+                }
             }
         }
     }

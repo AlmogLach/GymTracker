@@ -18,31 +18,31 @@ struct ContentView: View {
             DashboardView(onNavigateToHistory: {
                 selectedTab = 2 // Navigate to workout edit tab (history section)
             })
-                .tabItem { 
+                .tabItem {
                     Label("לוח", systemImage: selectedTab == 0 ? "house.fill" : "house")
                 }
                 .tag(0)
 
             PlansView()
-                .tabItem { 
+                .tabItem {
                     Label("תוכניות", systemImage: selectedTab == 1 ? "list.bullet.rectangle.fill" : "list.bullet.rectangle")
                 }
                 .tag(1)
 
             WorkoutEditView()
-                .tabItem { 
+                .tabItem {
                     Label("אימונים", systemImage: selectedTab == 2 ? "dumbbell.fill" : "dumbbell")
                 }
                 .tag(2)
 
             ProgressViewScreen()
-                .tabItem { 
+                .tabItem {
                     Label("סטטיסטיקות", systemImage: selectedTab == 3 ? "chart.bar.fill" : "chart.bar")
                 }
                 .tag(3)
 
             SettingsView()
-                .tabItem { 
+                .tabItem {
                     Label("הגדרות", systemImage: selectedTab == 4 ? "gearshape.fill" : "gearshape")
                 }
                 .tag(4)

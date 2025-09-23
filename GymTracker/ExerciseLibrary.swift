@@ -19,25 +19,102 @@ struct ExerciseLibraryItem: Identifiable, Hashable {
 
 enum ExerciseLibrary {
     static let exercises: [ExerciseLibraryItem] = [
+        // Chest
         ExerciseLibraryItem(name: "לחיצת חזה במוט", bodyPart: .chest, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "לחיצת חזה בשיפוע חיובי במוט", bodyPart: .chest, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "לחיצת חזה בשיפוע שלילי במוט", bodyPart: .chest, equipment: "מוט", isBodyweight: false),
         ExerciseLibraryItem(name: "לחיצת חזה בדאמבלים", bodyPart: .chest, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "לחיצת חזה בשיפוע חיובי בדאמבלים", bodyPart: .chest, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "לחיצת חזה בשיפוע שלילי בדאמבלים", bodyPart: .chest, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "פלייס בדאמבלים", bodyPart: .chest, equipment: "דאמבלים", isBodyweight: false),
         ExerciseLibraryItem(name: "פלייס במכונה", bodyPart: .chest, equipment: "מכונה", isBodyweight: false),
-        ExerciseLibraryItem(name: "סקוואט", bodyPart: .legs, equipment: "מוט", isBodyweight: false),
-        ExerciseLibraryItem(name: "לחיצת רגליים", bodyPart: .legs, equipment: "מכונה", isBodyweight: false),
-        ExerciseLibraryItem(name: "דד-ליפט", bodyPart: .legs, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "קרוס-אובר בכבל", bodyPart: .chest, equipment: "כבל", isBodyweight: false),
+        ExerciseLibraryItem(name: "קרוס-אובר בפולי נמוך", bodyPart: .chest, equipment: "כבל", isBodyweight: false),
+        ExerciseLibraryItem(name: "קרוס-אובר בפולי עליון", bodyPart: .chest, equipment: "כבל", isBodyweight: false),
+        ExerciseLibraryItem(name: "לחיצת חזה במכונה", bodyPart: .chest, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "שכיבות סמיכה", bodyPart: .chest, equipment: nil, isBodyweight: true),
+        ExerciseLibraryItem(name: "שכיבות סמיכה בשיפוע", bodyPart: .chest, equipment: nil, isBodyweight: true),
+
+        // Back
         ExerciseLibraryItem(name: "עליות מתח", bodyPart: .back, equipment: nil, isBodyweight: true),
+        ExerciseLibraryItem(name: "עליות מתח באחיזה הפוכה", bodyPart: .back, equipment: nil, isBodyweight: true),
+        ExerciseLibraryItem(name: "מתח באחיזה צרה", bodyPart: .back, equipment: nil, isBodyweight: true),
+        ExerciseLibraryItem(name: "פולי עליון", bodyPart: .back, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "פולי עליון אחיזה הפוכה", bodyPart: .back, equipment: "מכונה", isBodyweight: false),
         ExerciseLibraryItem(name: "חתירה במוט", bodyPart: .back, equipment: "מוט", isBodyweight: false),
         ExerciseLibraryItem(name: "חתירה בדאמבלים", bodyPart: .back, equipment: "דאמבלים", isBodyweight: false),
-        ExerciseLibraryItem(name: "פולי עליון", bodyPart: .back, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "חתירה בכבל בישיבה", bodyPart: .back, equipment: "כבל", isBodyweight: false),
+        ExerciseLibraryItem(name: "חתירת T-בר", bodyPart: .back, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "פייס-פול", bodyPart: .back, equipment: "כבל", isBodyweight: false),
+        ExerciseLibraryItem(name: "פשיטת זרוע ישרה בפולי", bodyPart: .back, equipment: "כבל", isBodyweight: false),
+        ExerciseLibraryItem(name: "היפר-אקסטנשן גב", bodyPart: .back, equipment: "מכונה", isBodyweight: false),
+
+        // Shoulders
         ExerciseLibraryItem(name: "לחיצת כתפיים בעמידה", bodyPart: .shoulders, equipment: "מוט", isBodyweight: false),
         ExerciseLibraryItem(name: "לחיצת כתפיים בדאמבלים", bodyPart: .shoulders, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "לחיצת כתפיים בישיבה בדאמבלים", bodyPart: .shoulders, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "ארנולד פרס", bodyPart: .shoulders, equipment: "דאמבלים", isBodyweight: false),
         ExerciseLibraryItem(name: "צידיים בדאמבלים", bodyPart: .shoulders, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "הרמות קדמיות בדאמבלים", bodyPart: .shoulders, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "הרחקה לצד במכונה", bodyPart: .shoulders, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "ריר דלט פליי בדאמבלים", bodyPart: .shoulders, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "אפרייט ראו", bodyPart: .shoulders, equipment: "מוט", isBodyweight: false),
+
+        // Arms - Biceps
         ExerciseLibraryItem(name: "בייספס בעמידה", bodyPart: .arms, equipment: "מוט", isBodyweight: false),
         ExerciseLibraryItem(name: "בייספס בדאמבלים", bodyPart: .arms, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "בייספס במוט W", bodyPart: .arms, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "האמר קארל (פטיש)", bodyPart: .arms, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "בייספס על ספסל כומר", bodyPart: .arms, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "קונסנטריישן קארל", bodyPart: .arms, equipment: "דאמבלים", isBodyweight: false),
+
+        // Arms - Triceps
         ExerciseLibraryItem(name: "פוש דאון טרייספס", bodyPart: .arms, equipment: "כבל", isBodyweight: false),
+        ExerciseLibraryItem(name: "פוש דאון בחבל", bodyPart: .arms, equipment: "כבל", isBodyweight: false),
+        ExerciseLibraryItem(name: "פשיטת טרייספס מעל הראש בדאמבל", bodyPart: .arms, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "פשיטת טרייספס מעל הראש בכבל", bodyPart: .arms, equipment: "כבל", isBodyweight: false),
+        ExerciseLibraryItem(name: "סקאל-קראשר (פשיטת טרייספס בשכיבה)", bodyPart: .arms, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "לחיצת חזה באחיזה צרה", bodyPart: .arms, equipment: "מוט", isBodyweight: false),
         ExerciseLibraryItem(name: "מקבילים", bodyPart: .arms, equipment: nil, isBodyweight: true),
+
+        // Legs
+        ExerciseLibraryItem(name: "סקוואט", bodyPart: .legs, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "פרונט סקוואט", bodyPart: .legs, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "גובליט סקוואט", bodyPart: .legs, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "לאנג׳ קדמי", bodyPart: .legs, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "לאנג׳ הליכה", bodyPart: .legs, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "לאנג׳ לאחור", bodyPart: .legs, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "לאנג׳ צדדי", bodyPart: .legs, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "ספליט סקוואט בולגרי", bodyPart: .legs, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "לחיצת רגליים", bodyPart: .legs, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "דד-ליפט", bodyPart: .legs, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "דדליפט רומני", bodyPart: .legs, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "דדליפט רומני בדאמבלים", bodyPart: .legs, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "כפיפת ברכיים בשכיבה", bodyPart: .legs, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "כפיפת ברכיים בישיבה", bodyPart: .legs, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "פשיטת ברכיים", bodyPart: .legs, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "היפ תראסט במוט", bodyPart: .legs, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "גלוט ברידג׳", bodyPart: .legs, equipment: nil, isBodyweight: true),
+        ExerciseLibraryItem(name: "הרמות שוק בעמידה", bodyPart: .legs, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "הרמות שוק בישיבה", bodyPart: .legs, equipment: "מכונה", isBodyweight: false),
+        ExerciseLibraryItem(name: "האק סקוואט", bodyPart: .legs, equipment: "מכונה", isBodyweight: false),
+
+        // Core
         ExerciseLibraryItem(name: "פלאנק", bodyPart: .core, equipment: nil, isBodyweight: true),
+        ExerciseLibraryItem(name: "פלאנק צד", bodyPart: .core, equipment: nil, isBodyweight: true),
         ExerciseLibraryItem(name: "כפיפות בטן", bodyPart: .core, equipment: nil, isBodyweight: true),
+        ExerciseLibraryItem(name: "סיט-אפ", bodyPart: .core, equipment: nil, isBodyweight: true),
+        ExerciseLibraryItem(name: "הרמות רגליים בתלייה", bodyPart: .core, equipment: nil, isBodyweight: true),
+        ExerciseLibraryItem(name: "הרמות רגליים בשכיבה", bodyPart: .core, equipment: nil, isBodyweight: true),
+        ExerciseLibraryItem(name: "קרנצ׳ בכבל", bodyPart: .core, equipment: "כבל", isBodyweight: false),
+        ExerciseLibraryItem(name: "רוסיאן טוויסט", bodyPart: .core, equipment: "דאמבלים", isBodyweight: false),
+        ExerciseLibraryItem(name: "פאלוף פרס", bodyPart: .core, equipment: "כבל", isBodyweight: false),
+
+        // Full Body / Power
+        ExerciseLibraryItem(name: "דדליפט סומו", bodyPart: .fullBody, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "קלין אנד פרס", bodyPart: .fullBody, equipment: "מוט", isBodyweight: false),
+        ExerciseLibraryItem(name: "קטלבל סווינג", bodyPart: .fullBody, equipment: "קטלבל", isBodyweight: false),
+        ExerciseLibraryItem(name: "בורפיז", bodyPart: .fullBody, equipment: nil, isBodyweight: true)
     ]
 }
 
