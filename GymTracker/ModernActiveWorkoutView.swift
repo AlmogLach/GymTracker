@@ -422,24 +422,7 @@ struct ModernActiveWorkoutView: View {
     
     private var floatingActionButton: some View {
         HStack(spacing: 16) {
-            // Rest button
-            Button(action: { startRestTimer() }) {
-                HStack(spacing: 8) {
-                    Image(systemName: "timer")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text("מנוחה")
-                        .font(.system(size: 16, weight: .semibold))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
-                .background(Color.orange.opacity(0.8))
-                .clipShape(Capsule())
-            }
-            .disabled(showRestTimer)
-            .opacity(showRestTimer ? 0.5 : 1.0)
-            
-            // Log set button
+// Log set button
             Button(action: { addSet() }) {
                 HStack(spacing: 8) {
                     Image(systemName: "plus.circle.fill")
