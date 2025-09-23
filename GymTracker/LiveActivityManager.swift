@@ -185,8 +185,8 @@ final class LiveActivityManager {
                         activity = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
                     }
                     print("✅ LiveActivity: Retry successful! Activity ID: \(activity?.id ?? "unknown")")
-                } catch retryError {
-                    print("❌ LiveActivity: Retry failed: \(retryError)")
+                } catch {
+                    print("❌ LiveActivity: Retry failed: \(error)")
                 }
             }
         }
