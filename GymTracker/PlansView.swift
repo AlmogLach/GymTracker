@@ -439,6 +439,7 @@ struct EditPlanSheet: View {
     @State private var selectedTab: EditTab = .details
     @State private var showAddExercise = false
     @State private var showExerciseLibrary = false
+    @State private var showReorderExercises = false
     @State private var editingExercise: Exercise?
     @State private var showDeleteConfirmation = false
     @State private var exerciseToDelete: Exercise?
@@ -531,6 +532,16 @@ struct EditPlanSheet: View {
                     newExercise.label = planType == .fullBody ? planType.workoutLabels.first : selectedExerciseLabel
                     exercises.append(newExercise)
                 }
+            }
+            .sheet(isPresented: $showReorderExercises) {
+                PlanExercisesReorderSheet(
+                    planType: planType,
+                    labels: planType.workoutLabels,
+                    exercises: exercises,
+                    onSave: { newOrder in
+                        exercises = newOrder
+                    }
+                )
             }
             .sheet(item: $editingExercise) { exercise in
             ExerciseEditSheet(
@@ -723,6 +734,16 @@ struct EditPlanSheet: View {
                     }
                 }
                 .background(AppTheme.screenBG)
+        .sheet(isPresented: $showReorderExercises) {
+            PlanExercisesReorderSheet(
+                planType: planType,
+                labels: planType.workoutLabels,
+                exercises: exercises,
+                onSave: { newOrder in
+                    exercises = newOrder
+                }
+            )
+        }
             }
         }
     }
@@ -863,6 +884,15 @@ struct EditPlanSheet: View {
                 .font(.system(size: 20, weight: .bold, design: .rounded))
 
             Spacer()
+
+            Button(action: { showReorderExercises = true }) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.up.arrow.down")
+                    Text("סדר")
+                }
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.small)
 
             if planType != .fullBody {
                 // Quick selector for default label when adding exercises
@@ -1032,6 +1062,91 @@ struct EditPlanSheet: View {
         }
         .padding(.horizontal, AppTheme.s16)
         .padding(.bottom, 100)
+    }
+
+    // MARK: - Reorder Sheet for Plan Exercises
+    struct PlanExercisesReorderSheet: View {
+        let planType: PlanType
+        let labels: [String]
+        @State var exercises: [Exercise]
+        let onSave: ([Exercise]) -> Void
+        @Environment(\.dismiss) private var dismiss
+
+        var body: some View {
+            NavigationStack {
+                List {
+                    ForEach(sectionedExercises.keys.sorted(by: labelSort), id: \.self) { label in
+                        Section(header: Text(sectionTitle(for: label))) {
+                            ForEach(sectionedExercises[label] ?? []) { exercise in
+                                HStack {
+                                    Image(systemName: "line.3.horizontal")
+                                        .foregroundStyle(.secondary)
+                                    Text(exercise.name)
+                                    Spacer()
+                                    if let reps = exercise.plannedReps {
+                                        Text("\(exercise.plannedSets)×\(reps)")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        Text("\(exercise.plannedSets) סטים")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                }
+                            }
+                            .onMove { from, to in
+                                move(in: label, from: from, to: to)
+                            }
+                        }
+                    }
+                }
+                .environment(\ .editMode, .constant(.active))
+                .navigationTitle("סידור תרגילים")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("ביטול") { dismiss() }
+                    }
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("שמור") {
+                            onSave(exercises)
+                            dismiss()
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+            }
+        }
+
+        private var sectionedExercises: [String: [Exercise]] {
+            Dictionary(grouping: exercises) { ex in ex.label ?? labels.first ?? "" }
+        }
+
+        private func labelSort(_ a: String, _ b: String) -> Bool {
+            guard planType != .fullBody else { return true }
+            let ai = labels.firstIndex(of: a) ?? 0
+            let bi = labels.firstIndex(of: b) ?? 0
+            return ai < bi
+        }
+
+        private func sectionTitle(for label: String) -> String {
+            planType == .fullBody ? "תרגילים" : "אימון \(label)"
+        }
+
+        private func move(in label: String, from source: IndexSet, to destination: Int) {
+            var group = sectionedExercises[label] ?? []
+            group.move(fromOffsets: source, toOffset: destination)
+
+            var new: [Exercise] = []
+            for currentLabel in sectionedExercises.keys.sorted(by: labelSort) {
+                if currentLabel == label {
+                    new.append(contentsOf: group)
+                } else {
+                    new.append(contentsOf: sectionedExercises[currentLabel] ?? [])
+                }
+            }
+            exercises = new
+        }
     }
 
     private var scheduleInfoCard: some View {

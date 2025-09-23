@@ -171,12 +171,6 @@ struct WorkoutEditView: View {
     private var workoutHistoryView: some View {
         ScrollView {
             VStack(spacing: AppTheme.s16) {
-                // Quick stats
-                historyStatsSection
-                
-                // Progress insights
-                progressInsightsSection
-                
                 // Sessions list
                 LazyVStack(spacing: AppTheme.s12) {
                     ForEach(filteredSessions) { session in
@@ -1004,6 +998,7 @@ struct WorkoutSessionEditSheet: View {
     @State private var showDeleteConfirmation = false
     @State private var selectedExercise: ExerciseSession?
     @State private var showAllExercises = false
+    @State private var showReorderExercises = false
     @State private var durationMinutes: Int
     @State private var durationSeconds: Int
     
@@ -1415,6 +1410,23 @@ struct WorkoutSessionEditSheet: View {
 
                             Spacer()
 
+                            Button(action: { showReorderExercises = true }) {
+                                HStack(spacing: 4) {
+                                    Text("סדר תרגילים")
+                                        .font(.caption)
+                                        .fontWeight(.medium)
+
+                                    Image(systemName: "arrow.up.arrow.down")
+                                        .font(.caption2)
+                                }
+                                .foregroundStyle(AppTheme.accent)
+                                .padding(.horizontal, AppTheme.s8)
+                                .padding(.vertical, 4)
+                                .background(AppTheme.accent.opacity(0.1))
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+
                             Button(action: { showAllExercises = true }) {
                                 HStack(spacing: 4) {
                                     Text("הצג הכל")
@@ -1609,6 +1621,9 @@ struct WorkoutSessionEditSheet: View {
         .sheet(isPresented: $showAllExercises) {
             NewAllExercisesSheet(session: session)
         }
+        .sheet(isPresented: $showReorderExercises) {
+            ExerciseReorderSheet(session: session)
+        }
     }
 
     private var allowedLabels: [String] {
@@ -1647,6 +1662,56 @@ struct WorkoutSessionEditSheet: View {
         modelContext.delete(session)
         try? modelContext.save()
         dismiss()
+    }
+}
+
+struct ExerciseReorderSheet: View {
+    let session: WorkoutSession
+    @Environment(\.dismiss) private var dismiss
+    @State private var items: [ExerciseSession] = []
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(items, id: \.exerciseName) { ex in
+                    HStack {
+                        Image(systemName: "line.3.horizontal")
+                            .foregroundStyle(.secondary)
+                        Text(ex.exerciseName)
+                    }
+                }
+                .onMove(perform: onMove)
+            }
+            .navigationTitle("סדר תרגילים")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("ביטול") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    EditButton()
+                }
+                ToolbarItem(placement: .bottomBar) {
+                    Button("שמור") {
+                        applyOrder()
+                        dismiss()
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .frame(maxWidth: .infinity)
+                }
+            }
+            .onAppear {
+                items = session.exerciseSessions
+            }
+        }
+    }
+
+    private func onMove(from source: IndexSet, to destination: Int) {
+        items.move(fromOffsets: source, toOffset: destination)
+    }
+
+    private func applyOrder() {
+        session.exerciseSessions = items
     }
 }
 
