@@ -24,6 +24,7 @@ struct ActiveWorkoutView: View {
     @State private var restTimer: Timer?
     @State private var restSecondsRemaining = 0
     @State private var showRestTimer = false
+    @State private var restEndsAt: Date?
     @State private var showTestAlert = false
     
     @State private var currentWeight: Double = 0.0
