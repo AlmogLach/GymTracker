@@ -710,6 +710,13 @@ struct ModernActiveWorkoutView: View {
         if currentSession != nil {
             print("🔄 Switching to workout session Live Activity")
             Task {
+                // End current rest activity first
+                LiveActivityManager.shared.endRest()
+                
+                // Wait a bit for cleanup
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                
+                // Start new workout session
                 await LiveActivityManager.shared.startWorkoutSession(
                     workoutLabel: workout?.label,
                     exerciseName: currentExercise?.name

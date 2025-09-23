@@ -64,6 +64,13 @@ final class LiveActivityManager {
         if seconds <= 0 {
             print("🔄 LiveActivity: Timer finished, switching to workout session")
             Task {
+                // End current activity first
+                await endRest()
+                
+                // Wait a bit for cleanup
+                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+                
+                // Start new workout session
                 await startWorkoutSession(
                     workoutLabel: activity.attributes.workoutLabel,
                     exerciseName: activity.content.state.exerciseName
