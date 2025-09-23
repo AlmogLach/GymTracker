@@ -106,6 +106,38 @@ final class LiveActivityManager {
         print("🧪 Testing Live Activity manually...")
         startRest(durationSeconds: 30, exerciseName: "Test Exercise", workoutLabel: "Test Workout")
     }
+    
+    // Simple test function with minimal data
+    func testSimpleLiveActivity() {
+        print("🧪 Testing SIMPLE Live Activity...")
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { 
+            print("❌ LiveActivity: Activities not enabled in system settings")
+            return 
+        }
+        
+        let start = Date()
+        let end = start.addingTimeInterval(30)
+        let attributes = RestActivityAttributes(workoutLabel: "Simple Test")
+        let state = RestActivityAttributes.ContentState(
+            remainingSeconds: 30,
+            exerciseName: "Simple Test",
+            startedAt: start,
+            endsAt: end
+        )
+        
+        do {
+            if #available(iOS 16.2, *) {
+                let content = ActivityContent(state: state, staleDate: nil)
+                activity = try Activity.request(attributes: attributes, content: content, pushType: nil)
+            } else {
+                activity = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
+            }
+            print("✅ SIMPLE LiveActivity: Started successfully! Activity ID: \(activity?.id ?? "unknown")")
+        } catch {
+            print("❌ SIMPLE LiveActivity: Start error: \(error)")
+            print("❌ SIMPLE LiveActivity: Error details: \(error.localizedDescription)")
+        }
+    }
 }
 
 #else

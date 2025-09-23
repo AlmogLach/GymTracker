@@ -170,6 +170,14 @@ struct ActiveWorkoutView: View {
                 }
                 .foregroundStyle(.orange)
                 .font(.title2)
+                
+                // Simple test button (DEBUG ONLY)
+                Button("🔬") {
+                    print("🔬 Simple test button tapped!")
+                    LiveActivityManager.shared.testSimpleLiveActivity()
+                }
+                .foregroundStyle(.blue)
+                .font(.title2)
                         
                 Button("שמור") {
                     completeWorkout()
