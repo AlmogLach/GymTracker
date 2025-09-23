@@ -283,6 +283,7 @@ struct RestLiveActivity: Widget {
                 Image(systemName: context.state.remainingSeconds > 0 ? "timer" : "figure.strengthtraining.traditional")
                     .font(.caption)
                     .foregroundColor(.white)
+            }
         }
     }
 }
