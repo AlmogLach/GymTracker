@@ -7,12 +7,13 @@
 
 import WidgetKit
 import SwiftUI
+import ActivityKit
 
 @main
 struct GymTrackerWidgetsBundle: WidgetBundle {
     var body: some Widget {
-        GymTrackerWidgets()
-        GymTrackerWidgetsControl()
-        GymTrackerWidgetsLiveActivity()
+        if #available(iOS 16.1, *) {
+            RestLiveActivity()
+        }
     }
 }
