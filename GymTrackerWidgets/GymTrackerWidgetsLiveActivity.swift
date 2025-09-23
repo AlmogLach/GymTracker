@@ -68,7 +68,7 @@ struct RestLiveActivity: Widget {
                             
                             // Progress ring - calculate progress based on remaining time
                             let totalRestTime = 120 // Default 2 minutes
-                            let progress = min(1.0, CGFloat(context.state.remainingSeconds) / CGFloat(totalRestTime))
+                            let progress = max(0.0, min(1.0, CGFloat(context.state.remainingSeconds) / CGFloat(totalRestTime)))
                             
                             Circle()
                                 .trim(from: 0, to: progress)

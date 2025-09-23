@@ -697,6 +697,7 @@ struct ModernActiveWorkoutView: View {
         restTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             if self.restSecondsRemaining > 0 {
                 self.restSecondsRemaining -= 1
+                print("⏰ Rest timer: \(self.restSecondsRemaining) seconds remaining")
                 LiveActivityManager.shared.updateRemaining(self.restSecondsRemaining)
             } else {
                 self.stopRestTimer()

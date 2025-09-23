@@ -53,9 +53,16 @@ final class LiveActivityManager {
     }
 
     func updateRemaining(_ seconds: Int) {
-        guard let activity else { return }
+        guard let activity else { 
+            print("⚠️ LiveActivity: No activity to update")
+            return 
+        }
+        
+        print("🔄 LiveActivity: Updating remaining time to \(seconds) seconds")
+        
         let now = Date()
         let end = now.addingTimeInterval(TimeInterval(max(0, seconds)))
+        
         if #available(iOS 16.2, *) {
             let previous = activity.content.state
             let state = RestActivityAttributes.ContentState(
@@ -64,7 +71,10 @@ final class LiveActivityManager {
                 startedAt: previous.startedAt,
                 endsAt: end
             )
-            Task { await activity.update(ActivityContent(state: state, staleDate: nil)) }
+            Task { 
+                await activity.update(ActivityContent(state: state, staleDate: nil))
+                print("✅ LiveActivity: Updated successfully")
+            }
         } else {
             let previous = activity.contentState
             let state = RestActivityAttributes.ContentState(
@@ -73,7 +83,10 @@ final class LiveActivityManager {
                 startedAt: previous.startedAt,
                 endsAt: end
             )
-            Task { await activity.update(using: state) }
+            Task { 
+                await activity.update(using: state)
+                print("✅ LiveActivity: Updated successfully")
+            }
         }
     }
 
