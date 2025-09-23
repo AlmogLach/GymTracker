@@ -482,12 +482,16 @@ struct ActiveWorkoutView: View {
                 stopRestTimer()
             }
         }
+        // Schedule lock-screen notification for rest end
+        NotificationManager.shared.cancelRestEndNotification()
+        NotificationManager.shared.scheduleRestEndNotification(after: restSecondsRemaining, exerciseName: currentExercise?.name)
     }
     
     private func stopRestTimer() {
         restTimer?.invalidate()
         restTimer = nil
         showRestTimer = false
+        NotificationManager.shared.cancelRestEndNotification()
     }
 
     private func formatTime(_ seconds: Int) -> String {

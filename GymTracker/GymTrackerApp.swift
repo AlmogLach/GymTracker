@@ -67,6 +67,7 @@ struct GymTrackerApp: App {
             ContentView()
                 .environment(\.layoutDirection, .rightToLeft)
                 .onAppear {
+                    NotificationManager.shared.requestAuthorizationIfNeeded()
                     UIView.appearance().semanticContentAttribute = .forceRightToLeft
                     UILabel.appearance().semanticContentAttribute = .forceRightToLeft
                     UINavigationBar.appearance().semanticContentAttribute = .forceRightToLeft
