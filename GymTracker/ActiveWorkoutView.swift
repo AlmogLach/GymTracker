@@ -153,6 +153,13 @@ struct ActiveWorkoutView: View {
                     .fontWeight(.bold)
                         
                         Spacer()
+                
+                // Test Live Activity button (DEBUG ONLY)
+                Button("🧪") {
+                    LiveActivityManager.shared.testLiveActivity()
+                }
+                .foregroundStyle(.orange)
+                .font(.title2)
                         
                 Button("שמור") {
                     completeWorkout()

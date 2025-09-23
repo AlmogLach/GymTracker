@@ -11,10 +11,20 @@ final class LiveActivityManager {
     private var activity: Activity<RestActivityAttributes>?
 
     func startRest(durationSeconds: Int, exerciseName: String?, workoutLabel: String?) {
-        guard ActivityAuthorizationInfo().areActivitiesEnabled, durationSeconds > 0 else { 
-            print("LiveActivity: Activities not enabled or duration is 0")
+        print("🔍 LiveActivity: Starting rest timer with \(durationSeconds) seconds")
+        print("🔍 LiveActivity: Exercise: \(exerciseName ?? "nil")")
+        print("🔍 LiveActivity: Workout: \(workoutLabel ?? "nil")")
+        
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { 
+            print("❌ LiveActivity: Activities not enabled in system settings")
             return 
         }
+        
+        guard durationSeconds > 0 else { 
+            print("❌ LiveActivity: Duration is 0 or negative")
+            return 
+        }
+        
         let start = Date()
         let end = start.addingTimeInterval(TimeInterval(durationSeconds))
         let attributes = RestActivityAttributes(workoutLabel: workoutLabel)
@@ -24,6 +34,10 @@ final class LiveActivityManager {
             startedAt: start,
             endsAt: end
         )
+        
+        print("🔍 LiveActivity: Creating activity with attributes: \(attributes)")
+        print("🔍 LiveActivity: Creating activity with state: \(state)")
+        
         do {
             if #available(iOS 16.2, *) {
                 let content = ActivityContent(state: state, staleDate: nil)
@@ -31,9 +45,10 @@ final class LiveActivityManager {
             } else {
                 activity = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
             }
-            print("LiveActivity started successfully")
+            print("✅ LiveActivity: Started successfully! Activity ID: \(activity?.id ?? "unknown")")
         } catch {
-            print("LiveActivity start error: \(error)")
+            print("❌ LiveActivity: Start error: \(error)")
+            print("❌ LiveActivity: Error details: \(error.localizedDescription)")
         }
     }
 
@@ -84,6 +99,12 @@ final class LiveActivityManager {
             Task { await activity.end(using: finalState, dismissalPolicy: .immediate) }
         }
         self.activity = nil
+    }
+    
+    // Test function to manually trigger Live Activity
+    func testLiveActivity() {
+        print("🧪 Testing Live Activity manually...")
+        startRest(durationSeconds: 30, exerciseName: "Test Exercise", workoutLabel: "Test Workout")
     }
 }
 
