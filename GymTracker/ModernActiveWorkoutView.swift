@@ -766,7 +766,7 @@ struct ModernActiveWorkoutView: View {
         case .active:
             print("📱 App became active")
             
-            // If we have a workout session but no rest timer, end any Live Activities
+            // Only end Live Activities if we're not in a rest timer
             if currentSession != nil && !showRestTimer {
                 print("🏋️ Workout session active, ending Live Activities")
                 LiveActivityManager.shared.endRest()

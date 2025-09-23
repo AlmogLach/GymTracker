@@ -66,9 +66,12 @@ struct RestLiveActivity: Widget {
                                 .stroke(Color.white.opacity(0.2), lineWidth: 6)
                                 .frame(width: 120, height: 120)
                             
-                            // Progress ring
+                            // Progress ring - calculate progress based on remaining time
+                            let totalRestTime = 120 // Default 2 minutes
+                            let progress = min(1.0, CGFloat(context.state.remainingSeconds) / CGFloat(totalRestTime))
+                            
                             Circle()
-                                .trim(from: 0, to: CGFloat(context.state.remainingSeconds) / CGFloat(120))
+                                .trim(from: 0, to: progress)
                                 .stroke(
                                     LinearGradient(
                                         colors: [Color.blue, Color.cyan],

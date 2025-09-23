@@ -121,19 +121,20 @@ final class LiveActivityManager {
             return 
         }
         
-        // Check if we already have an active Live Activity
-        if activity != nil {
-            print("🔍 LiveActivity: Already have an active activity, updating instead")
-            // Just update the existing activity with new exercise info
-            await updateWorkoutInfo(exerciseName: exerciseName)
-            return
-        }
-        
-        // Check if there are any existing activities in the system
+        // Check if there are any existing activities in the system first
         let existingActivities = Activity<RestActivityAttributes>.activities
         if !existingActivities.isEmpty {
-            print("🔍 LiveActivity: Found \(existingActivities.count) existing activities, ending them first")
-            // End all existing activities first
+            print("🔍 LiveActivity: Found \(existingActivities.count) existing activities")
+            
+            // If we already have an activity reference, just update it
+            if let currentActivity = activity, existingActivities.contains(where: { $0.id == currentActivity.id }) {
+                print("🔍 LiveActivity: Updating existing activity instead of creating new one")
+                await updateWorkoutInfo(exerciseName: exerciseName)
+                return
+            }
+            
+            // If we have activities but no reference, end them all first
+            print("🔍 LiveActivity: Ending all existing activities first")
             for existingActivity in existingActivities {
                 print("🔍 LiveActivity: Ending existing activity: \(existingActivity.id)")
                 if #available(iOS 16.2, *) {
@@ -142,8 +143,16 @@ final class LiveActivityManager {
                     Task { await existingActivity.end(using: existingActivity.contentState, dismissalPolicy: .immediate) }
                 }
             }
-            // Wait longer for cleanup to prevent "Target is not foreground" error
-            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            
+            // Wait for cleanup
+            try? await Task.sleep(nanoseconds: 1_500_000_000) // 1.5 seconds
+        }
+        
+        // Check if we still have an active activity after cleanup
+        if activity != nil {
+            print("🔍 LiveActivity: Still have activity reference, updating instead")
+            await updateWorkoutInfo(exerciseName: exerciseName)
+            return
         }
         
         print("🔍 LiveActivity: Creating new activity")
@@ -172,22 +181,10 @@ final class LiveActivityManager {
             print("❌ LiveActivity: Workout session start error: \(error)")
             print("❌ LiveActivity: Error details: \(error.localizedDescription)")
             
-            // If we get a "Target is not foreground" error, try again after a delay
-            if error.localizedDescription.contains("Target is not foreground") {
-                print("🔄 LiveActivity: Retrying after delay...")
-                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
-                
-                do {
-                    if #available(iOS 16.2, *) {
-                        let content = ActivityContent(state: state, staleDate: nil)
-                        activity = try Activity.request(attributes: attributes, content: content, pushType: nil)
-                    } else {
-                        activity = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
-                    }
-                    print("✅ LiveActivity: Retry successful! Activity ID: \(activity?.id ?? "unknown")")
-                } catch {
-                    print("❌ LiveActivity: Retry failed: \(error)")
-                }
+            // Don't retry if it's a visibility error - just skip
+            if error.localizedDescription.contains("Target is not foreground") || error.localizedDescription.contains("visibility") {
+                print("⚠️ LiveActivity: Skipping due to visibility error - app may not be in foreground")
+                return
             }
         }
     }
