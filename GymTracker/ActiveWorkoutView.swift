@@ -24,7 +24,7 @@ struct ActiveWorkoutView: View {
     @State private var restTimer: Timer?
     @State private var restSecondsRemaining = 0
     @State private var showRestTimer = false
-    @State private var restEndsAt: Date?
+    @State private var showTestAlert = false
     
     @State private var currentWeight: Double = 0.0
     @State private var currentReps: Int = 0
@@ -130,6 +130,11 @@ struct ActiveWorkoutView: View {
                 nextExercise()
             }
         }
+        .alert("Test Live Activity", isPresented: $showTestAlert) {
+            Button("OK") { }
+        } message: {
+            Text("Live Activity test triggered! Check console logs and lock screen.")
+        }
         .onDisappear {
             stopWorkoutTimer()
         }
@@ -156,7 +161,11 @@ struct ActiveWorkoutView: View {
                 
                 // Test Live Activity button (DEBUG ONLY)
                 Button("🧪") {
+                    print("🧪 Test button tapped!")
+                    print("🧪 About to call testLiveActivity()")
+                    showTestAlert = true
                     LiveActivityManager.shared.testLiveActivity()
+                    print("🧪 testLiveActivity() called")
                 }
                 .foregroundStyle(.orange)
                 .font(.title2)
