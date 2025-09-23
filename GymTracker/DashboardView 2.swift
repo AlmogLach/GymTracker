@@ -53,7 +53,7 @@ struct DashboardView: View {
             NewPlanSheet()
         }
         .fullScreenCover(isPresented: $showActiveWorkout) {
-            ActiveWorkoutView(
+            ModernActiveWorkoutView(
                 workout: selectedWorkout ?? getNextWorkout(),
                 onComplete: {
                     showActiveWorkout = false
