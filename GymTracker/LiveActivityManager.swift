@@ -142,8 +142,8 @@ final class LiveActivityManager {
                     Task { await existingActivity.end(using: existingActivity.contentState, dismissalPolicy: .immediate) }
                 }
             }
-            // Wait a moment for cleanup
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            // Wait longer for cleanup to prevent "Target is not foreground" error
+            try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
         }
         
         print("🔍 LiveActivity: Creating new activity")
@@ -171,6 +171,24 @@ final class LiveActivityManager {
         } catch {
             print("❌ LiveActivity: Workout session start error: \(error)")
             print("❌ LiveActivity: Error details: \(error.localizedDescription)")
+            
+            // If we get a "Target is not foreground" error, try again after a delay
+            if error.localizedDescription.contains("Target is not foreground") {
+                print("🔄 LiveActivity: Retrying after delay...")
+                try? await Task.sleep(nanoseconds: 2_000_000_000) // 2 seconds
+                
+                do {
+                    if #available(iOS 16.2, *) {
+                        let content = ActivityContent(state: state, staleDate: nil)
+                        activity = try Activity.request(attributes: attributes, content: content, pushType: nil)
+                    } else {
+                        activity = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
+                    }
+                    print("✅ LiveActivity: Retry successful! Activity ID: \(activity?.id ?? "unknown")")
+                } catch retryError {
+                    print("❌ LiveActivity: Retry failed: \(retryError)")
+                }
+            }
         }
     }
     

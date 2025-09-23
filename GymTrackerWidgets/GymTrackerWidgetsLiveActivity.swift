@@ -64,29 +64,35 @@ struct RestLiveActivity: Widget {
                         
                         // Control buttons
                         HStack(spacing: 12) {
-                            Link("דלג", destination: URL(string: "gymtracker://rest/skip")!)
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.blue.opacity(0.8))
-                                .clipShape(Capsule())
+                            Button(intent: RestSkipIntent()) {
+                                Text("דלג")
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.blue.opacity(0.8))
+                                    .clipShape(Capsule())
+                            }
                             
-                            Link("עצור", destination: URL(string: "gymtracker://rest/stop")!)
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.red.opacity(0.8))
-                                .clipShape(Capsule())
+                            Button(intent: RestStopIntent()) {
+                                Text("עצור")
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.red.opacity(0.8))
+                                    .clipShape(Capsule())
+                            }
                             
-                            Link("+1 דק׳", destination: URL(string: "gymtracker://rest/addminute")!)
-                                .font(.caption)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.green.opacity(0.8))
-                                .clipShape(Capsule())
+                            Button(intent: RestAddMinuteIntent()) {
+                                Text("+1 דק׳")
+                                    .font(.caption)
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.green.opacity(0.8))
+                                    .clipShape(Capsule())
+                            }
                         }
                     }
                 } else {
@@ -105,39 +111,47 @@ struct RestLiveActivity: Widget {
                         // Workout controls
                         VStack(spacing: 8) {
                             HStack(spacing: 12) {
-                                Link("הוסף סט", destination: URL(string: "gymtracker://workout/logset")!)
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.green.opacity(0.8))
-                                    .clipShape(Capsule())
+                                Button(intent: LogSetIntent()) {
+                                    Text("הוסף סט")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.green.opacity(0.8))
+                                        .clipShape(Capsule())
+                                }
                                 
-                                Link("תרגיל הבא", destination: URL(string: "gymtracker://workout/nextexercise")!)
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.blue.opacity(0.8))
-                                    .clipShape(Capsule())
+                                Button(intent: NextExerciseIntent()) {
+                                    Text("תרגיל הבא")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.blue.opacity(0.8))
+                                        .clipShape(Capsule())
+                                }
                             }
                             
                             HStack(spacing: 12) {
-                                Link("מנוחה", destination: URL(string: "gymtracker://workout/startrest")!)
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.orange.opacity(0.8))
-                                    .clipShape(Capsule())
+                                Button(intent: StartRestIntent()) {
+                                    Text("מנוחה")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.orange.opacity(0.8))
+                                        .clipShape(Capsule())
+                                }
                                 
-                                Link("סיים", destination: URL(string: "gymtracker://workout/finish")!)
-                                    .font(.caption)
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.red.opacity(0.8))
-                                    .clipShape(Capsule())
+                                Button(intent: FinishWorkoutIntent()) {
+                                    Text("סיים")
+                                        .font(.caption)
+                                        .foregroundColor(.white)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.red.opacity(0.8))
+                                        .clipShape(Capsule())
+                                }
                             }
                         }
                     }
@@ -191,47 +205,8 @@ struct RestLiveActivity: Widget {
                     if context.state.remainingSeconds > 0 {
                         // Rest timer controls
                         HStack(spacing: 16) {
-                            Link("דלג", destination: URL(string: "gymtracker://rest/skip")!)
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.blue)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.blue.opacity(0.2))
-                                .clipShape(Capsule())
-                            
-                            Link("עצור", destination: URL(string: "gymtracker://rest/stop")!)
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.red)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.red.opacity(0.2))
-                                .clipShape(Capsule())
-                            
-                            Link("+1 דק׳", destination: URL(string: "gymtracker://rest/addminute")!)
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundStyle(.green)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 6)
-                                .background(Color.green.opacity(0.2))
-                                .clipShape(Capsule())
-                        }
-                    } else {
-                        // Workout session controls
-                        VStack(spacing: 8) {
-                            HStack(spacing: 16) {
-                                Link("הוסף סט", destination: URL(string: "gymtracker://workout/logset")!)
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.green)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.green.opacity(0.2))
-                                    .clipShape(Capsule())
-                                
-                                Link("תרגיל הבא", destination: URL(string: "gymtracker://workout/nextexercise")!)
+                            Button(intent: RestSkipIntent()) {
+                                Text("דלג")
                                     .font(.caption)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(.blue)
@@ -241,17 +216,8 @@ struct RestLiveActivity: Widget {
                                     .clipShape(Capsule())
                             }
                             
-                            HStack(spacing: 16) {
-                                Link("מנוחה", destination: URL(string: "gymtracker://workout/startrest")!)
-                                    .font(.caption)
-                                    .fontWeight(.semibold)
-                                    .foregroundStyle(.orange)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(Color.orange.opacity(0.2))
-                                    .clipShape(Capsule())
-                                
-                                Link("סיים", destination: URL(string: "gymtracker://workout/finish")!)
+                            Button(intent: RestStopIntent()) {
+                                Text("עצור")
                                     .font(.caption)
                                     .fontWeight(.semibold)
                                     .foregroundStyle(.red)
@@ -259,6 +225,68 @@ struct RestLiveActivity: Widget {
                                     .padding(.vertical, 6)
                                     .background(Color.red.opacity(0.2))
                                     .clipShape(Capsule())
+                            }
+                            
+                            Button(intent: RestAddMinuteIntent()) {
+                                Text("+1 דק׳")
+                                    .font(.caption)
+                                    .fontWeight(.semibold)
+                                    .foregroundStyle(.green)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.green.opacity(0.2))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    } else {
+                        // Workout session controls
+                        VStack(spacing: 8) {
+                            HStack(spacing: 16) {
+                                Button(intent: LogSetIntent()) {
+                                    Text("הוסף סט")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.green)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.green.opacity(0.2))
+                                        .clipShape(Capsule())
+                                }
+                                
+                                Button(intent: NextExerciseIntent()) {
+                                    Text("תרגיל הבא")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.blue)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.blue.opacity(0.2))
+                                        .clipShape(Capsule())
+                                }
+                            }
+                            
+                            HStack(spacing: 16) {
+                                Button(intent: StartRestIntent()) {
+                                    Text("מנוחה")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.orange)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.orange.opacity(0.2))
+                                        .clipShape(Capsule())
+                                }
+                                
+                                Button(intent: FinishWorkoutIntent()) {
+                                    Text("סיים")
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                        .foregroundStyle(.red)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(Color.red.opacity(0.2))
+                                        .clipShape(Capsule())
+                                }
                             }
                         }
                     }
