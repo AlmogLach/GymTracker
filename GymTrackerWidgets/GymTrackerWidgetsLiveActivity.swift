@@ -46,7 +46,8 @@ struct RestLiveActivity: Widget {
                     Spacer()
                 }
                 
-                if context.state.remainingSeconds > 0 {
+                // Consider rest state active if current time is before endsAt
+                if Date() < context.state.endsAt {
                     // Rest timer - Professional design
                     VStack(spacing: 16) {
                         Text("מנוחה")
@@ -66,9 +67,10 @@ struct RestLiveActivity: Widget {
                                 .stroke(Color.white.opacity(0.2), lineWidth: 6)
                                 .frame(width: 120, height: 120)
                             
-                            // Progress ring - calculate progress based on remaining time
-                            let totalRestTime = 120 // Default 2 minutes
-                            let progress = max(0.0, min(1.0, CGFloat(context.state.remainingSeconds) / CGFloat(totalRestTime)))
+                            // Progress ring based on time window
+                            let total = max(1.0, context.state.endsAt.timeIntervalSince(context.state.startedAt))
+                            let remaining = max(0.0, context.state.endsAt.timeIntervalSince(Date()))
+                            let progress = max(0.0, min(1.0, remaining / total))
                             
                             Circle()
                                 .trim(from: 0, to: progress)
@@ -82,11 +84,11 @@ struct RestLiveActivity: Widget {
                                 )
                                 .frame(width: 120, height: 120)
                                 .rotationEffect(.degrees(-90))
-                                .animation(.easeInOut(duration: 1), value: context.state.remainingSeconds)
+                                .animation(.easeInOut(duration: 1), value: remaining)
                             
                             // Timer text
                             VStack(spacing: 2) {
-                                Text(timerInterval: context.state.startedAt...context.state.endsAt)
+                                Text(timerInterval: Date()...context.state.endsAt)
                                     .font(.title)
                                     .fontWeight(.bold)
                                     .monospacedDigit()
@@ -300,7 +302,7 @@ struct RestLiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    if context.state.remainingSeconds > 0 {
+                    if Date() < context.state.endsAt {
                         VStack(alignment: .trailing, spacing: 4) {
                             Text(timerInterval: context.state.startedAt...context.state.endsAt)
                                 .font(.headline)
@@ -325,7 +327,7 @@ struct RestLiveActivity: Widget {
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    if context.state.remainingSeconds > 0 {
+                    if Date() < context.state.endsAt {
                         // Rest timer controls - Professional design
                         HStack(spacing: 16) {
                             Link(destination: URL(string: "gymtracker://rest/skip")!) {
@@ -457,12 +459,12 @@ struct RestLiveActivity: Widget {
                     }
                 }
             } compactLeading: {
-                Image(systemName: context.state.remainingSeconds > 0 ? "timer" : "figure.strengthtraining.traditional")
+                Image(systemName: Date() < context.state.endsAt ? "timer" : "figure.strengthtraining.traditional")
                     .font(.caption)
                     .foregroundColor(.white)
             } compactTrailing: {
-                if context.state.remainingSeconds > 0 {
-                    Text(timerInterval: context.state.startedAt...context.state.endsAt)
+                if Date() < context.state.endsAt {
+                    Text(timerInterval: Date()...context.state.endsAt)
                         .font(.caption)
                         .fontWeight(.semibold)
                         .monospacedDigit()
@@ -473,7 +475,7 @@ struct RestLiveActivity: Widget {
                         .foregroundColor(.green)
                 }
             } minimal: {
-                Image(systemName: context.state.remainingSeconds > 0 ? "timer" : "figure.strengthtraining.traditional")
+                Image(systemName: Date() < context.state.endsAt ? "timer" : "figure.strengthtraining.traditional")
                     .font(.caption)
                     .foregroundColor(.white)
             }

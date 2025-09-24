@@ -269,6 +269,8 @@ struct PlanCard: View {
         case .fullBody: return AppTheme.accent
         case .ab: return AppTheme.success
         case .abc: return AppTheme.warning
+        case .abcd: return .purple
+        case .abcde: return .pink
         }
     }
     
@@ -530,6 +532,10 @@ struct EditPlanSheet: View {
                     )
                     // Default label by plan type / current selection
                     newExercise.label = planType == .fullBody ? planType.workoutLabels.first : selectedExerciseLabel
+                    // Append to end of that label group by orderIndex
+                    let label = newExercise.label ?? planType.workoutLabels.first ?? ""
+                    let currentMax = exercises.filter { ($0.label ?? label) == label }.map { $0.orderIndex }.max() ?? -1
+                    newExercise.orderIndex = currentMax + 1
                     exercises.append(newExercise)
                 }
             }
@@ -539,6 +545,14 @@ struct EditPlanSheet: View {
                     labels: planType.workoutLabels,
                     exercises: exercises,
                     onSave: { newOrder in
+                        // Persist order index per label
+                        var counters: [String: Int] = [:]
+                        for idx in newOrder.indices {
+                            let label = newOrder[idx].label ?? planType.workoutLabels.first ?? ""
+                            let next = (counters[label] ?? 0)
+                            newOrder[idx].orderIndex = next
+                            counters[label] = next + 1
+                        }
                         exercises = newOrder
                     }
                 )
@@ -740,7 +754,16 @@ struct EditPlanSheet: View {
                 labels: planType.workoutLabels,
                 exercises: exercises,
                 onSave: { newOrder in
-                    exercises = newOrder
+                    // עדכון אינדקסי סדר לפי המיקום החדש בכל תווית
+                    var counters: [String: Int] = [:]
+                    let stamped = newOrder
+                    for idx in stamped.indices {
+                        let label = stamped[idx].label ?? planType.workoutLabels.first ?? ""
+                        let next = counters[label] ?? 0
+                        stamped[idx].orderIndex = next
+                        counters[label] = next + 1
+                    }
+                    exercises = stamped
                 }
             )
         }
@@ -1077,7 +1100,7 @@ struct EditPlanSheet: View {
                 List {
                     ForEach(sectionedExercises.keys.sorted(by: labelSort), id: \.self) { label in
                         Section(header: Text(sectionTitle(for: label))) {
-                            ForEach(sectionedExercises[label] ?? []) { exercise in
+                    ForEach(sectionedExercises[label] ?? []) { exercise in
                                 HStack {
                                     Image(systemName: "line.3.horizontal")
                                         .foregroundStyle(.secondary)
@@ -1467,6 +1490,14 @@ struct EditPlanSheet: View {
         // Ensure exercises labels and schedule are consistent with plan type
         normalizeExercisesForPlanType()
         normalizeScheduleForPlanType()
+        // Stamp orderIndex by current array order per label, so start workout uses this order
+        var counters: [String: Int] = [:]
+        for idx in exercises.indices {
+            let label = exercises[idx].label ?? planType.workoutLabels.first ?? ""
+            let next = counters[label] ?? 0
+            exercises[idx].orderIndex = next
+            counters[label] = next + 1
+        }
         plan.exercises = exercises
         plan.schedule = schedule
 
@@ -1718,6 +1749,10 @@ private func planTypeDescription(_ type: PlanType) -> String {
         return "חלוקה לשני אימונים A ו-B"
     case .abc:
         return "חלוקה לשלושה אימונים A, B ו-C"
+    case .abcd:
+        return "חלוקה לארבעה אימונים A, B, C ו-D"
+    case .abcde:
+        return "חלוקה לחמישה אימונים A, B, C, D ו-E"
     }
 }
 

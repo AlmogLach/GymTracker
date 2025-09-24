@@ -683,11 +683,17 @@ struct ModernActiveWorkoutView: View {
                 print("⏰ Rest timer: \(self.restSecondsRemaining) seconds remaining")
                 LiveActivityManager.shared.updateRemaining(self.restSecondsRemaining)
             } else {
-                print("⏰ Rest timer finished, stopping timer")
+                print("⏰ Rest timer finished, updating to workout mode")
+                self.restSecondsRemaining = 0
+                LiveActivityManager.shared.updateRemaining(0)
                 self.stopRestTimer()
             }
         }
         
+        // Schedule audible alert when rest ends
+        NotificationManager.shared.cancelRestEndNotification()
+        NotificationManager.shared.scheduleRestEndNotification(after: restSecondsRemaining, exerciseName: currentExercise?.name)
+
         // Start Live Activity
         LiveActivityManager.shared.startRest(
             durationSeconds: restSecondsRemaining, 
@@ -706,27 +712,10 @@ struct ModernActiveWorkoutView: View {
         showRestTimer = false
         restEndsAt = nil
         
-        // Switch to workout session Live Activity instead of ending
-        if currentSession != nil {
-            print("🔄 Switching to workout session Live Activity")
-            Task {
-                // End current rest activity first
-                LiveActivityManager.shared.endRest()
-                
-                // Wait a bit for cleanup
-                try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-                
-                // Start new workout session
-                await LiveActivityManager.shared.startWorkoutSession(
-                    workoutLabel: workout?.label,
-                    exerciseName: currentExercise?.name
-                )
-            }
-        } else {
-            // End Live Activity only if no workout session
-            LiveActivityManager.shared.endRest()
-        }
-        
+        // Cancel pending rest-end alert
+        NotificationManager.shared.cancelRestEndNotification()
+
+        // Don't end Live Activity - it's already updated to workout mode
         print("✅ Rest timer stopped successfully")
     }
     
@@ -769,11 +758,15 @@ struct ModernActiveWorkoutView: View {
         case .active:
             print("📱 App became active")
             
-            // Only end Live Activities if we're not in a rest timer
+            // End any rest Live Activity when returning to app if not resting
             if currentSession != nil && !showRestTimer {
-                print("🏋️ Workout session active, ending Live Activities")
                 LiveActivityManager.shared.endRest()
                 hasWorkoutLiveActivity = false
+            }
+
+            // Ensure workout clock continues while app was backgrounded
+            if currentSession != nil {
+                elapsedSeconds = max(0, Int(Date().timeIntervalSince(workoutStartTime)))
             }
             
             // Handle rest timer restoration
@@ -816,21 +809,8 @@ struct ModernActiveWorkoutView: View {
             workoutTimer?.invalidate()
             workoutTimer = nil
             
-            // Start Live Activity for workout session if we have an active workout
-            if currentSession != nil && !showRestTimer && !hasWorkoutLiveActivity {
-                print("🏋️ Starting workout Live Activity")
-                hasWorkoutLiveActivity = true
-                
-                // Small delay to ensure smooth transition
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    Task {
-                        await LiveActivityManager.shared.startWorkoutSession(
-                            workoutLabel: self.workout?.label, 
-                            exerciseName: self.currentExercise?.name
-                        )
-                    }
-                }
-            }
+            // Do not auto-start a workout Live Activity on background.
+            // Live Activities will be shown only for explicit rest timers.
             
         @unknown default:
             print("⚠️ Unknown scene phase")

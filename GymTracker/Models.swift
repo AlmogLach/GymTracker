@@ -34,12 +34,16 @@ enum PlanType: String, Codable, CaseIterable {
     case fullBody = "Full Body"
     case ab = "AB"
     case abc = "ABC"
+    case abcd = "ABCD"
+    case abcde = "ABCDE"
 
     var workoutLabels: [String] {
         switch self {
         case .fullBody: return ["Full"]
         case .ab: return ["A", "B"]
         case .abc: return ["A", "B", "C"]
+        case .abcd: return ["A", "B", "C", "D"]
+        case .abcde: return ["A", "B", "C", "D", "E"]
         }
     }
 }
@@ -57,6 +61,8 @@ final class Exercise {
     var plannedReps: Int?
     var notes: String?
     var label: String?
+    // Order of the exercise within its workout label (A/B/C or Full)
+    var orderIndex: Int
     var muscleGroup: String?
     var equipment: String?
     var isBodyweight: Bool?
@@ -64,13 +70,14 @@ final class Exercise {
     var workoutDay: String?
     var workoutPlan: WorkoutPlan?
 
-    init(name: String, plannedSets: Int, plannedReps: Int? = nil, notes: String? = nil, label: String? = nil, muscleGroup: String? = nil, equipment: String? = nil, isBodyweight: Bool? = nil, isFavorite: Bool? = nil, workoutDay: String? = nil, workoutPlan: WorkoutPlan? = nil) {
+    init(name: String, plannedSets: Int, plannedReps: Int? = nil, notes: String? = nil, label: String? = nil, orderIndex: Int = 0, muscleGroup: String? = nil, equipment: String? = nil, isBodyweight: Bool? = nil, isFavorite: Bool? = nil, workoutDay: String? = nil, workoutPlan: WorkoutPlan? = nil) {
         self.id = UUID()
         self.name = name
         self.plannedSets = plannedSets
         self.plannedReps = plannedReps
         self.notes = notes
         self.label = label
+        self.orderIndex = orderIndex
         self.muscleGroup = muscleGroup
         self.equipment = equipment
         self.isBodyweight = isBodyweight

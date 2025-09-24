@@ -1668,6 +1668,7 @@ struct WorkoutSessionEditSheet: View {
 struct ExerciseReorderSheet: View {
     let session: WorkoutSession
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
     @State private var items: [ExerciseSession] = []
 
     var body: some View {
@@ -1677,8 +1678,20 @@ struct ExerciseReorderSheet: View {
                     HStack {
                         Image(systemName: "line.3.horizontal")
                             .foregroundStyle(.secondary)
-                        Text(ex.exerciseName)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(ex.exerciseName)
+                                .font(.headline)
+                                .fontWeight(.medium)
+
+                            Text("\(ex.setLogs.count) סטים")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Spacer()
                     }
+                    .padding(.vertical, 4)
                 }
                 .onMove(perform: onMove)
             }
@@ -1701,7 +1714,7 @@ struct ExerciseReorderSheet: View {
                 }
             }
             .onAppear {
-                items = session.exerciseSessions
+                items = Array(session.exerciseSessions)
             }
         }
     }
@@ -1711,7 +1724,21 @@ struct ExerciseReorderSheet: View {
     }
 
     private func applyOrder() {
-        session.exerciseSessions = items
+        // מחק את כל התרגילים הקיימים
+        session.exerciseSessions.removeAll()
+
+        // הוסף את התרגילים בסדר החדש
+        for item in items {
+            session.exerciseSessions.append(item)
+        }
+
+        // שמור את השינויים
+        do {
+            try modelContext.save()
+            print("✅ סדר התרגילים נשמר בהצלחה")
+        } catch {
+            print("❌ שגיאה בשמירת סדר התרגילים: \(error)")
+        }
     }
 }
 

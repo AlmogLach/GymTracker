@@ -416,9 +416,12 @@ struct DashboardView: View {
         for plan in plans.sorted(by: { $0.name < $1.name }) {
             if plan.schedule.contains(where: { $0.weekday == today }) {
                 let nextLabel = getNextWorkoutLabel(for: plan)
-                let exercises = plan.exercises.filter { ex in
-                    (ex.label ?? plan.planType.workoutLabels.first) == nextLabel
-                }
+                let exercises = plan.exercises
+                    .filter { ($0.label ?? plan.planType.workoutLabels.first) == nextLabel }
+                    .sorted { a, b in
+                        if a.orderIndex != b.orderIndex { return a.orderIndex < b.orderIndex }
+                        return a.name < b.name
+                    }
                 
                 return NextWorkout(
                     plan: plan,
@@ -435,9 +438,12 @@ struct DashboardView: View {
             for plan in plans.sorted(by: { $0.name < $1.name }) {
                 if plan.schedule.contains(where: { $0.weekday == targetDay }) {
                     let nextLabel = getNextWorkoutLabel(for: plan)
-                    let exercises = plan.exercises.filter { ex in
-                        (ex.label ?? plan.planType.workoutLabels.first) == nextLabel
-                    }
+                    let exercises = plan.exercises
+                        .filter { ($0.label ?? plan.planType.workoutLabels.first) == nextLabel }
+                        .sorted { a, b in
+                            if a.orderIndex != b.orderIndex { return a.orderIndex < b.orderIndex }
+                            return a.name < b.name
+                        }
                     
                     return NextWorkout(
                         plan: plan,

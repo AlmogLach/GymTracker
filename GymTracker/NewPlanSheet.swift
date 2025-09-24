@@ -530,6 +530,10 @@ struct PlanTypeOption: View {
             return "חלוקה לשני אימונים A ו-B"
         case .abc:
             return "חלוקה לשלושה אימונים A, B ו-C"
+        case .abcd:
+            return "חלוקה לארבעה אימונים A, B, C ו-D"
+        case .abcde:
+            return "חלוקה לחמישה אימונים A, B, C, D ו-E"
         }
     }
 }
