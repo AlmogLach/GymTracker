@@ -25,13 +25,10 @@ struct ModernActiveWorkoutView: View {
     @State private var restSecondsRemaining = 0
     @State private var showRestTimer = false
     @State private var restEndsAt: Date?
-    @State private var restInitialSeconds = 0
     @State private var hasWorkoutLiveActivity = false
     
     @State private var currentWeight: Double = 0.0
     @State private var currentReps: Int = 0
-    @State private var isWarmupSet: Bool = false
-    @State private var didInitSetFields: Bool = false
     
     @State private var showingFinishConfirmation = false
     @State private var showingExerciseDetails = false
@@ -83,26 +80,9 @@ struct ModernActiveWorkoutView: View {
         .onAppear {
             startWorkoutSession()
             initializeCurrentExerciseValues()
-            // Start Live Activity in workout mode when entering the screen
-            LiveActivityManager.shared.startWorkout(
-                exerciseName: currentExercise?.name,
-                workoutLabel: workout?.label,
-                elapsed: elapsedSeconds,
-                setsCompleted: getCurrentSetsCompleted(),
-                setsPlanned: currentExercise?.plannedSets
-            )
-        }
-        .task {
-            // Ensure state syncs after initial render/data hydration
-            didInitSetFields = false
-            initializeCurrentExerciseValues()
         }
         .onChange(of: scenePhase) { _, phase in
             handleScenePhaseChange(phase)
-        }
-        .onChange(of: currentExerciseIndex) {
-            didInitSetFields = false
-            initializeCurrentExerciseValues()
         }
         .onReceive(NotificationCenter.default.publisher(for: .restSkipAction)) { _ in
             handleRestSkip()
@@ -144,7 +124,7 @@ struct ModernActiveWorkoutView: View {
         VStack(spacing: 16) {
             // Top navigation
             HStack {
-                Button(action: { handleBack() }) {
+                Button(action: { dismiss() }) {
                     HStack(spacing: 8) {
                         Image(systemName: "chevron.right")
                             .font(.system(size: 16, weight: .semibold))
@@ -321,26 +301,13 @@ struct ModernActiveWorkoutView: View {
                 
                 Spacer()
                 
-                Text("סט \(getCurrentSetsCompleted() + 1)" + (isWarmupSet ? " (חימום)" : ""))
+                Text("סט \(getCurrentSetsCompleted() + 1)")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.white.opacity(0.7))
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .background(AppTheme.accent.opacity(0.2))
                     .clipShape(Capsule())
-            }
-            
-            // Last set preview (like exercise info)
-            if let last = latestLoggedSetForCurrentExercise() {
-                HStack(spacing: 8) {
-                    Text("אחרון:")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.7))
-                    Text("\(String(format: "%.1f", last.weight)) ק\"ג × \(last.reps)\(last.isWarmup == true ? " (חימום)" : "")")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.85))
-                    Spacer()
-                }
             }
             
             // Weight and reps controls
@@ -373,22 +340,6 @@ struct ModernActiveWorkoutView: View {
                         }
                     }
                 }
-
-                // Quick add chips
-                HStack(spacing: 8) {
-                    ForEach([2.5, 5.0, 10.0], id: \.self) { inc in
-                        Button(action: { adjustWeight(inc) }) {
-                            Text("+\(String(format: "%.1f", inc)) ק\"ג")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
-                                .background(AppTheme.accent.opacity(0.25))
-                                .clipShape(Capsule())
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
                 
                 // Reps control
                 HStack {
@@ -417,23 +368,6 @@ struct ModernActiveWorkoutView: View {
                                 .foregroundColor(.green.opacity(0.8))
                         }
                     }
-                }
-
-                // Warmup toggle
-                HStack {
-                    Text("חימום")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundColor(.white.opacity(0.8))
-                        .frame(width: 60, alignment: .leading)
-
-                    Spacer()
-
-                    Toggle(isOn: $isWarmupSet) {
-                        Text(isWarmupSet ? "סט חימום" : "סט עבודה")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(isWarmupSet ? .orange : .white)
-                    }
-                    .tint(.orange)
                 }
             }
             .padding(20)
@@ -479,18 +413,7 @@ struct ModernActiveWorkoutView: View {
                         index: index,
                         isActive: index == currentExerciseIndex,
                         isCompleted: index < currentExerciseIndex,
-                        onTap: {
-                            currentExerciseIndex = index
-                            initializeCurrentExerciseValues()
-                            Task { @MainActor in
-                                await LiveActivityManager.shared.updateWorkoutInfo(
-                                    exerciseName: currentExercise?.name,
-                                    setsCompleted: getCurrentSetsCompleted(),
-                                    setsPlanned: currentExercise?.plannedSets,
-                                    elapsed: elapsedSeconds
-                                )
-                            }
-                        }
+                        onTap: { currentExerciseIndex = index }
                     )
                 }
             }
@@ -561,7 +484,7 @@ struct ModernActiveWorkoutView: View {
                         
                         // Progress circle
                         Circle()
-                            .trim(from: 0, to: CGFloat(restSecondsRemaining) / CGFloat(max(1, restInitialSeconds)))
+                            .trim(from: 0, to: CGFloat(restSecondsRemaining) / CGFloat(settings.defaultRestSeconds))
                             .stroke(
                                 LinearGradient(
                                     colors: [AppTheme.accent, AppTheme.accent.opacity(0.7)],
@@ -703,14 +626,12 @@ struct ModernActiveWorkoutView: View {
               let exerciseSession = session.exerciseSessions.first(where: { $0.exerciseName == currentExercise?.name }) else {
             return 0
         }
-        return exerciseSession.setLogs.filter { !($0.isWarmup ?? false) }.count
+        return exerciseSession.setLogs.count
     }
     
     private func getTotalSetsCompleted() -> Int {
         guard let session = currentSession else { return 0 }
-        return session.exerciseSessions.reduce(0) { total, ex in
-            total + ex.setLogs.filter { !($0.isWarmup ?? false) }.count
-        }
+        return session.exerciseSessions.reduce(0) { $0 + $1.setLogs.count }
     }
     
     // MARK: - Actions
@@ -728,7 +649,7 @@ struct ModernActiveWorkoutView: View {
               let exercise = currentExercise,
               let session = currentSession else { return }
 
-        let setLog = SetLog(reps: currentReps, weight: currentWeight, isWarmup: isWarmupSet)
+        let setLog = SetLog(reps: currentReps, weight: currentWeight)
 
         if let existingExerciseSession = session.exerciseSessions.first(where: { $0.exerciseName == exercise.name }) {
             existingExerciseSession.setLogs.append(setLog)
@@ -737,31 +658,8 @@ struct ModernActiveWorkoutView: View {
             session.exerciseSessions.append(newExerciseSession)
         }
 
-        // If this is a working set, auto-adjust plannedSets upward to match current working sets count
-        if !isWarmupSet {
-            if let ex = currentExercise,
-               let exSession = session.exerciseSessions.first(where: { $0.exerciseName == ex.name }) {
-                let workingCount = exSession.setLogs.filter { !($0.isWarmup ?? false) }.count
-                if workingCount > ex.plannedSets {
-                    ex.plannedSets = workingCount
-                }
-            }
-        }
-
         try? modelContext.save()
-        // Update Live Activity sets info
-        Task { @MainActor in
-            await LiveActivityManager.shared.updateWorkoutInfo(
-                exerciseName: currentExercise?.name,
-                setsCompleted: getCurrentSetsCompleted(),
-                setsPlanned: currentExercise?.plannedSets,
-                elapsed: elapsedSeconds
-            )
-        }
-
-        // Start rest: 60s for warmup, default for working set
-        let duration = isWarmupSet ? 60 : settings.defaultRestSeconds
-        startRestTimer(seconds: duration)
+        startRestTimer()
     }
     
     private func nextExercise() {
@@ -769,22 +667,12 @@ struct ModernActiveWorkoutView: View {
               currentExerciseIndex < workout.exercises.count - 1 else { return }
         currentExerciseIndex += 1
         initializeCurrentExerciseValues()
-        Task { @MainActor in
-            await LiveActivityManager.shared.updateWorkoutInfo(
-                exerciseName: currentExercise?.name,
-                setsCompleted: getCurrentSetsCompleted(),
-                setsPlanned: currentExercise?.plannedSets,
-                elapsed: elapsedSeconds
-            )
-        }
     }
     
-    private func startRestTimer(seconds: Int? = nil) {
-        let target = seconds ?? settings.defaultRestSeconds
-        print("⏰ Starting rest timer with \(target) seconds")
+    private func startRestTimer() {
+        print("⏰ Starting rest timer with \(settings.defaultRestSeconds) seconds")
         
-        restSecondsRemaining = target
-        restInitialSeconds = target
+        restSecondsRemaining = settings.defaultRestSeconds
         showRestTimer = true
         restEndsAt = Date().addingTimeInterval(TimeInterval(restSecondsRemaining))
         
@@ -810,9 +698,7 @@ struct ModernActiveWorkoutView: View {
         LiveActivityManager.shared.startRest(
             durationSeconds: restSecondsRemaining, 
             exerciseName: currentExercise?.name, 
-            workoutLabel: workout?.label,
-            setsCompleted: getCurrentSetsCompleted(),
-            setsPlanned: currentExercise?.plannedSets
+            workoutLabel: workout?.label
         )
         
         print("✅ Rest timer started successfully")
@@ -834,27 +720,10 @@ struct ModernActiveWorkoutView: View {
     }
     
     private func completeWorkout() {
-        // End any live activity first so the Lock Screen/Dynamic Island clears
-        LiveActivityManager.shared.finishWorkout()
         currentSession?.isCompleted = true
         currentSession?.durationSeconds = elapsedSeconds
         try? modelContext.save()
         onComplete()
-        dismiss()
-    }
-
-    private func handleBack() {
-        // End Live Activity but do not mark session as completed
-        LiveActivityManager.shared.finishWorkout()
-        workoutTimer?.invalidate()
-        workoutTimer = nil
-        restTimer?.invalidate()
-        restTimer = nil
-        // If nothing was logged, do not keep an empty workout session
-        if getTotalSetsCompleted() == 0, let session = currentSession {
-            modelContext.delete(session)
-            try? modelContext.save()
-        }
         dismiss()
     }
     
@@ -866,50 +735,18 @@ struct ModernActiveWorkoutView: View {
     
     private func initializeCurrentExerciseValues() {
         guard let exercise = currentExercise else { return }
-        // 1) Prefer values from the current session
-        if let current = currentSession,
-           let currentExerciseSession = current.exerciseSessions.first(where: { $0.exerciseName == exercise.name }) {
-            if let lastWorking = currentExerciseSession.setLogs.last(where: { !($0.isWarmup ?? false) }) {
-                currentWeight = lastWorking.weight
-                currentReps = lastWorking.reps
-                return
-            }
-            if let lastAny = currentExerciseSession.setLogs.last {
-                currentWeight = lastAny.weight
-                currentReps = lastAny.reps
-                return
-            }
-        }
-
-        // 2) Otherwise use the latest from history (prefer working set)
-        if let last = latestLoggedSetForCurrentExercise() {
-            currentWeight = last.weight
-            currentReps = last.reps
-            return
-        }
-
-        // 3) Fallback to planned reps
-        currentWeight = 0.0
-        currentReps = exercise.plannedReps ?? 8
-    }
-
-    private func latestLoggedSetForCurrentExercise() -> SetLog? {
-        guard let name = currentExercise?.name else { return nil }
-        // Try current @Query first
+        
         if let lastSession = sessions.first(where: { session in
-            session.exerciseSessions.contains { $0.exerciseName == name }
-        }), let lastExerciseSession = lastSession.exerciseSessions.first(where: { $0.exerciseName == name }) {
-            return lastExerciseSession.setLogs.last(where: { !($0.isWarmup ?? false) }) ?? lastExerciseSession.setLogs.last
+            session.exerciseSessions.contains { $0.exerciseName == exercise.name }
+        }),
+        let lastExerciseSession = lastSession.exerciseSessions.first(where: { $0.exerciseName == exercise.name }),
+        let lastSet = lastExerciseSession.setLogs.last {
+            currentWeight = lastSet.weight
+            currentReps = lastSet.reps
+        } else {
+            currentWeight = 0.0
+            currentReps = exercise.plannedReps ?? 8
         }
-        // Fallback to direct fetch to avoid race on first load
-        do {
-            let fetched = try modelContext.fetch(FetchDescriptor<WorkoutSession>(sortBy: [SortDescriptor(\.date, order: .reverse)]))
-            if let s = fetched.first(where: { $0.exerciseSessions.contains { $0.exerciseName == name } }),
-               let ex = s.exerciseSessions.first(where: { $0.exerciseName == name }) {
-                return ex.setLogs.last(where: { !($0.isWarmup ?? false) }) ?? ex.setLogs.last
-            }
-        } catch { }
-        return nil
     }
     
     // MARK: - Notification Handlers
@@ -921,15 +758,10 @@ struct ModernActiveWorkoutView: View {
         case .active:
             print("📱 App became active")
             
-            // Ensure Live Activity is in workout mode (not ended) when returning and not resting
-            if currentSession != nil && !showRestTimer && !(currentSession?.isCompleted ?? false) {
-                LiveActivityManager.shared.startWorkout(
-                    exerciseName: currentExercise?.name,
-                    workoutLabel: workout?.label,
-                    elapsed: elapsedSeconds,
-                    setsCompleted: getCurrentSetsCompleted(),
-                    setsPlanned: currentExercise?.plannedSets
-                )
+            // End any rest Live Activity when returning to app if not resting
+            if currentSession != nil && !showRestTimer {
+                LiveActivityManager.shared.endRest()
+                hasWorkoutLiveActivity = false
             }
 
             // Ensure workout clock continues while app was backgrounded
@@ -1002,11 +834,8 @@ struct ModernActiveWorkoutView: View {
     private func handleRestAddMinute() {
         if showRestTimer {
             restSecondsRemaining += 60
-            restInitialSeconds += 60
             restEndsAt = Date().addingTimeInterval(TimeInterval(restSecondsRemaining))
             LiveActivityManager.shared.updateRemaining(restSecondsRemaining)
-            NotificationManager.shared.cancelRestEndNotification()
-            NotificationManager.shared.scheduleRestEndNotification(after: restSecondsRemaining, exerciseName: currentExercise?.name)
         }
     }
     
@@ -1027,7 +856,6 @@ struct ModernActiveWorkoutView: View {
     }
     
     private func handleFinishWorkout() {
-        LiveActivityManager.shared.finishWorkout()
         completeWorkout()
     }
     
@@ -1168,185 +996,31 @@ struct ModernExerciseRow: View {
     }
 }
 
-struct Chip: View {
-    let text: String
-    let color: Color
-    var body: some View {
-        Text(text)
-            .font(.caption)
-            .fontWeight(.semibold)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .background(color.opacity(0.15))
-            .foregroundStyle(color)
-            .clipShape(Capsule())
-    }
-}
-
-struct StatPill: View {
-    let icon: String
-    let color: Color
-    let title: String
-    let value: String
-    var body: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                Circle().fill(color.opacity(0.15)).frame(width: 34, height: 34)
-                Image(systemName: icon).foregroundStyle(color)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.caption).foregroundStyle(.secondary)
-                Text(value).font(.subheadline).fontWeight(.semibold)
-            }
-        }
-        .padding(10)
-        .background(Color(.tertiarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
-}
-
 struct ExerciseDetailSheet: View {
     let exercise: Exercise?
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: [SortDescriptor(\WorkoutSession.date, order: .reverse)]) private var sessions: [WorkoutSession]
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 20) {
                     if let exercise = exercise {
-                        // Header card
-                        HStack(spacing: 12) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 14)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [AppTheme.accent, AppTheme.accent.opacity(0.7)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
-                                    )
-                                    .frame(width: 56, height: 56)
-                                Image(systemName: "dumbbell.fill")
-                                    .font(.system(size: 22, weight: .bold))
-                                    .foregroundColor(.white)
-                            }
-
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(exercise.name)
-                                    .font(.system(size: 22, weight: .bold, design: .rounded))
-                                if let muscleGroup = exercise.muscleGroup, !muscleGroup.isEmpty {
-                                    Text(muscleGroup)
-                                        .font(.subheadline)
-                                        .foregroundStyle(.secondary)
-                                }
-                                HStack(spacing: 6) {
-                                    Chip(text: "סטים מתוכננים: \(exercise.plannedSets)", color: .blue)
-                                    if let reps = exercise.plannedReps { Chip(text: "חזרות: \(reps)", color: .green) }
-                                }
-                            }
-
-                            Spacer()
-
-                            // Favorite toggle small
-                            Button(action: { exercise.isFavorite = !(exercise.isFavorite ?? false) }) {
-                                Image(systemName: (exercise.isFavorite ?? false) ? "heart.fill" : "heart")
-                                    .font(.title2)
-                                    .foregroundStyle(.red)
-                                    .padding(10)
-                                    .background(Color.red.opacity(0.1))
-                                    .clipShape(Circle())
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(16)
-                        .background(Color(.secondarySystemBackground))
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        Text(exercise.name)
+                            .font(.largeTitle)
+                            .fontWeight(.bold)
                         
-                        // Stats row
-                        if let stats = sessionStats(for: exercise) {
-                            HStack(spacing: 12) {
-                                StatPill(icon: "flame.fill", color: .orange, title: "חימום", value: "\(stats.warmups)")
-                                StatPill(icon: "checkmark.circle.fill", color: .green, title: "עבודה", value: "\(stats.working)")
-                                if let best = bestSet(for: exercise) {
-                                    StatPill(icon: "trophy.fill", color: .yellow, title: "שיא", value: "\(Int(best.weight))×\(best.reps)")
-                                }
-                            }
-                            .padding(12)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                        if let muscleGroup = exercise.muscleGroup {
+                            Text(muscleGroup)
+                                .font(.title2)
+                                .foregroundColor(.secondary)
                         }
                         
-                        // Last session summary
-                        if let last = lastSession(for: exercise) {
-                            VStack(alignment: .leading, spacing: 10) {
-                                HStack {
-                                    Text("האימון האחרון")
-                                        .font(.headline)
-                                    Spacer()
-                                    Text(last.date, style: .date)
-                                        .font(.caption)
-                                        .foregroundStyle(.secondary)
-                                }
-                                LazyVStack(spacing: 8) {
-                                    ForEach(Array(last.setLogs.enumerated()), id: \.offset) { idx, set in
-                                        HStack {
-                                            HStack(spacing: 6) {
-                                                Text("#\(idx + 1)")
-                                                    .font(.caption)
-                                                    .foregroundStyle(.secondary)
-                                                if set.isWarmup == true {
-                                                    Chip(text: "חימום", color: .orange)
-                                                }
-                                            }
-                                            Spacer()
-                                            Text("\(String(format: "%.1f", set.weight)) ק\"ג × \(set.reps)")
-                                                .font(.subheadline)
-                                        }
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 8)
-                                        .background(Color(.tertiarySystemBackground))
-                                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    }
-                                }
-                            }
-                            .padding(14)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                        }
-                        
-                        // Personal best
-                        if let best = bestSet(for: exercise) {
-                            HStack(spacing: 12) {
-                                ZStack {
-                                    Circle().fill(Color.orange.opacity(0.15)).frame(width: 44, height: 44)
-                                    Image(systemName: "trophy.fill").foregroundStyle(.orange)
-                                }
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("שיא אישי")
-                                        .font(.headline)
-                                    Text("\(String(format: "%.1f", best.weight)) ק\"ג × \(best.reps)")
-                                        .font(.subheadline)
-                                }
-                                Spacer()
-                            }
-                            .padding(14)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                        }
-                        
-                        // Notes
                         if let notes = exercise.notes, !notes.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("הערות")
-                                    .font(.headline)
-                                Text(notes)
-                                    .font(.body)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .padding(14)
-                            .background(Color(.secondarySystemBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            Text(notes)
+                                .font(.body)
+                                .padding()
+                                .background(Color.gray.opacity(0.1))
+                                .cornerRadius(8)
                         }
                     }
                 }
@@ -1356,44 +1030,12 @@ struct ExerciseDetailSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("סגור") { dismiss() }
-                }
-            }
-        }
-    }
-    
-    // MARK: - Helpers
-    private func sessionStats(for exercise: Exercise) -> (warmups: Int, working: Int)? {
-        if let last = lastSession(for: exercise) {
-            let warmups = last.setLogs.filter { $0.isWarmup == true }.count
-            let working = last.setLogs.filter { !($0.isWarmup ?? false) }.count
-            return (warmups, working)
-        }
-        return nil
-    }
-    private func lastSession(for exercise: Exercise) -> (date: Date, setLogs: [SetLog])? {
-        for session in sessions {
-            if let ex = session.exerciseSessions.first(where: { $0.exerciseName == exercise.name }), !ex.setLogs.isEmpty {
-                return (session.date, ex.setLogs)
-            }
-        }
-        return nil
-    }
-    
-    private func bestSet(for exercise: Exercise) -> SetLog? {
-        var best: SetLog? = nil
-        for session in sessions {
-            if let ex = session.exerciseSessions.first(where: { $0.exerciseName == exercise.name }) {
-                for set in ex.setLogs where !(set.isWarmup ?? false) {
-                    if let b = best {
-                        if set.weight > b.weight { best = set }
-                    } else {
-                        best = set
+                    Button("סגור") {
+                        dismiss()
                     }
                 }
             }
         }
-        return best
     }
 }
 
