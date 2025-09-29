@@ -1724,18 +1724,45 @@ struct ExerciseReorderSheet: View {
     }
 
     private func applyOrder() {
-        // מחק את כל התרגילים הקיימים
-        session.exerciseSessions.removeAll()
+        // 1) עדכון סדר התרגילים בתוך הסשן עצמו
+        session.exerciseSessions = items
 
-        // הוסף את התרגילים בסדר החדש
-        for item in items {
-            session.exerciseSessions.append(item)
+        // 2) נסה לעדכן גם את סדר התוכנית (Plan) כך שהאימונים הבאים ישתמשו באותו סדר
+        if let planName = session.planName {
+            do {
+                let plans = try modelContext.fetch(FetchDescriptor<WorkoutPlan>())
+                if let plan = plans.first(where: { $0.name == planName }) {
+                    let targetLabel = session.workoutLabel ?? plan.planType.workoutLabels.first ?? ""
+                    // מפה: שם תרגיל -> אינדקס חדש לפי הסדר מהסשן
+                    var nameToIndex: [String: Int] = [:]
+                    for (idx, exSession) in items.enumerated() {
+                        nameToIndex[exSession.exerciseName] = idx
+                    }
+                    // עדכון orderIndex לכל תרגיל בתוכנית ששייך לאותה תווית
+                    let grouped = plan.exercises.filter { ($0.label ?? plan.planType.workoutLabels.first) == targetLabel }
+                    for exercise in grouped {
+                        if let newIndex = nameToIndex[exercise.name] {
+                            exercise.orderIndex = newIndex
+                        }
+                    }
+                    // נרמול: ודא שאינדקסים עוקבים 0..n לפי מיון נוכחי
+                    let resorted = grouped.sorted { a, b in
+                        let ai = a.orderIndex ?? Int.max
+                        let bi = b.orderIndex ?? Int.max
+                        if ai != bi { return ai < bi }
+                        return a.name < b.name
+                    }
+                    for (idx, exercise) in resorted.enumerated() { exercise.orderIndex = idx }
+                }
+            } catch {
+                print("⚠️ שמירת סדר לתוכנית נכשלה: \(error)")
+            }
         }
 
-        // שמור את השינויים
+        // 3) שמירה בפועל
         do {
             try modelContext.save()
-            print("✅ סדר התרגילים נשמר בהצלחה")
+            print("✅ סדר התרגילים נשמר בהצלחה (סשן) וגם עודכן בתוכנית אם קיימת")
         } catch {
             print("❌ שגיאה בשמירת סדר התרגילים: \(error)")
         }
