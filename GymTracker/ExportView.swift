@@ -7,7 +7,6 @@
 
 import SwiftUI
 import SwiftData
-import WebKit
 
 struct ExportView: View {
     @Environment(\.modelContext) private var modelContext
@@ -181,10 +180,45 @@ struct PreviewSheet: View {
     
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                WebView(html: html)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("תצוגה מקדימה של הדוח")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .padding(.horizontal)
+                    
+                    Text("הדוח כולל:")
+                        .font(.headline)
+                        .padding(.horizontal)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("• טבלה מפורטת של כל האימונים מהחודש")
+                        Text("• משקלים טובים ביותר לכל תרגיל")
+                        Text("• סטטיסטיקות חודשיות")
+                        Text("• הוראות מילוי בעברית")
+                        Text("• עיצוב מותאם להדפסה")
+                    }
+                    .padding(.horizontal)
+                    
+                    Text("לצפייה מלאה, אנא ייצא את הקובץ ופתח אותו בדפדפן.")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                    
+                    Button("ייצא עכשיו") {
+                        dismiss()
+                        // Trigger export
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                    .padding(.horizontal)
+                    
+                    Spacer()
+                }
+                .padding(.top)
             }
             .navigationTitle("תצוגה מקדימה")
             .navigationBarTitleDisplayMode(.inline)
@@ -200,27 +234,6 @@ struct PreviewSheet: View {
     }
 }
 
-struct WebView: UIViewRepresentable {
-    let html: String
-    
-    func makeUIView(context: Context) -> WKWebView {
-        let configuration = WKWebViewConfiguration()
-        configuration.allowsInlineMediaPlayback = true
-        configuration.mediaTypesRequiringUserActionForPlayback = []
-        
-        let webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.translatesAutoresizingMaskIntoConstraints = false
-        webView.isOpaque = false
-        webView.backgroundColor = UIColor.clear
-        webView.scrollView.backgroundColor = UIColor.clear
-        
-        return webView
-    }
-    
-    func updateUIView(_ uiView: WKWebView, context: Context) {
-        uiView.loadHTMLString(html, baseURL: nil)
-    }
-}
 
 #Preview {
     ExportView()
