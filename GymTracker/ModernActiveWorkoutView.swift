@@ -334,7 +334,6 @@ struct ModernActiveWorkoutView: View {
             
             // Last set preview (like exercise info)
             if let last = latestLoggedSetForCurrentExercise() {
-                print("🔍 UI: Showing last set preview for '\(currentExercise?.name ?? "nil")': \(last.weight)kg x \(last.reps)")
                 HStack(spacing: 8) {
                     Text("אחרון:")
                         .font(.caption)
@@ -344,8 +343,22 @@ struct ModernActiveWorkoutView: View {
                         .foregroundColor(.white.opacity(0.85))
                     Spacer()
                 }
+                .onAppear {
+                    print("🔍 UI: Showing last set preview for '\(currentExercise?.name ?? "nil")': \(last.weight)kg x \(last.reps)")
+                }
             } else {
-                print("🔍 UI: No last set found for '\(currentExercise?.name ?? "nil")'")
+                HStack(spacing: 8) {
+                    Text("אחרון:")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.7))
+                    Text("אין נתונים קודמים")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.5))
+                    Spacer()
+                }
+                .onAppear {
+                    print("🔍 UI: No last set found for '\(currentExercise?.name ?? "nil")'")
+                }
             }
             
             // Weight and reps controls
