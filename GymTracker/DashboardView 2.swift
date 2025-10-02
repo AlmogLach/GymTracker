@@ -427,15 +427,18 @@ struct DashboardView: View {
                         return a.name < b.name
                     }
                 
-                // If no exercises found for the next label, fall back to any available exercises
+                // If no exercises found for the next label, fall back to exercises with the first available label
                 if exercises.isEmpty {
-                    print("⚠️ No exercises found for label '\(nextLabel)', falling back to all exercises")
-                    exercises = plan.exercises.sorted { a, b in
-                        let ai = a.orderIndex ?? 0
-                        let bi = b.orderIndex ?? 0
-                        if ai != bi { return ai < bi }
-                        return a.name < b.name
-                    }
+                    print("⚠️ No exercises found for label '\(nextLabel)', falling back to first available label")
+                    let firstLabel = plan.planType.workoutLabels.first ?? ""
+                    exercises = plan.exercises
+                        .filter { ($0.label ?? firstLabel) == firstLabel }
+                        .sorted { a, b in
+                            let ai = a.orderIndex ?? 0
+                            let bi = b.orderIndex ?? 0
+                            if ai != bi { return ai < bi }
+                            return a.name < b.name
+                        }
                 }
                 
                 return NextWorkout(
@@ -462,15 +465,18 @@ struct DashboardView: View {
                             return a.name < b.name
                         }
                     
-                    // If no exercises found for the next label, fall back to any available exercises
+                    // If no exercises found for the next label, fall back to exercises with the first available label
                     if exercises.isEmpty {
-                        print("⚠️ No exercises found for label '\(nextLabel)', falling back to all exercises")
-                        exercises = plan.exercises.sorted { a, b in
-                            let ai = a.orderIndex ?? 0
-                            let bi = b.orderIndex ?? 0
-                            if ai != bi { return ai < bi }
-                            return a.name < b.name
-                        }
+                        print("⚠️ No exercises found for label '\(nextLabel)', falling back to first available label")
+                        let firstLabel = plan.planType.workoutLabels.first ?? ""
+                        exercises = plan.exercises
+                            .filter { ($0.label ?? firstLabel) == firstLabel }
+                            .sorted { a, b in
+                                let ai = a.orderIndex ?? 0
+                                let bi = b.orderIndex ?? 0
+                                if ai != bi { return ai < bi }
+                                return a.name < b.name
+                            }
                     }
                     
                     return NextWorkout(
