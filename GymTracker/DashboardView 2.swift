@@ -381,7 +381,9 @@ struct DashboardView: View {
     private var unit: AppSettings.WeightUnit { settingsList.first?.weightUnit ?? .kg }
     
     private func totalSets(for session: WorkoutSession) -> Int {
-        session.exerciseSessions.reduce(0) { $0 + $1.setLogs.count }
+        session.exerciseSessions.reduce(0) { total, ex in
+            total + ex.setLogs.filter { !($0.isWarmup ?? false) }.count
+        }
     }
     
     private var thisWeekSessions: Int {
@@ -402,7 +404,7 @@ struct DashboardView: View {
     }
     
     private func totalSetsCount(for session: WorkoutSession) -> Int {
-        return session.exerciseSessions.flatMap { $0.setLogs }.count
+        return session.exerciseSessions.flatMap { $0.setLogs }.filter { !($0.isWarmup ?? false) }.count
     }
     
     private func displaySetsCount(for session: WorkoutSession) -> Int {
@@ -419,7 +421,9 @@ struct DashboardView: View {
                 let exercises = plan.exercises
                     .filter { ($0.label ?? plan.planType.workoutLabels.first) == nextLabel }
                     .sorted { a, b in
-                        if a.orderIndex != b.orderIndex { return a.orderIndex < b.orderIndex }
+                        let ai = a.orderIndex ?? 0
+                        let bi = b.orderIndex ?? 0
+                        if ai != bi { return ai < bi }
                         return a.name < b.name
                     }
                 
@@ -441,7 +445,9 @@ struct DashboardView: View {
                     let exercises = plan.exercises
                         .filter { ($0.label ?? plan.planType.workoutLabels.first) == nextLabel }
                         .sorted { a, b in
-                            if a.orderIndex != b.orderIndex { return a.orderIndex < b.orderIndex }
+                            let ai = a.orderIndex ?? 0
+                            let bi = b.orderIndex ?? 0
+                            if ai != bi { return ai < bi }
                             return a.name < b.name
                         }
                     
@@ -817,10 +823,18 @@ struct PlanWorkoutCard: View {
             VStack(spacing: AppTheme.s8) {
                 ForEach(plan.planType.workoutLabels, id: \.self) { label in
                     Button(action: {
+                        let filtered = plan.exercises
+                            .filter { $0.label == label || plan.planType == .fullBody }
+                            .sorted { a, b in
+                                let ai = a.orderIndex ?? 0
+                                let bi = b.orderIndex ?? 0
+                                if ai != bi { return ai < bi }
+                                return a.name < b.name
+                            }
                         let workout = NextWorkout(
                             plan: plan,
                             label: label,
-                            exercises: plan.exercises.filter { $0.label == label || plan.planType == .fullBody },
+                            exercises: filtered,
                             day: label
                         )
                         onSelectWorkout(workout)

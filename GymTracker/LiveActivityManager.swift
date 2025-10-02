@@ -9,8 +9,58 @@ final class LiveActivityManager {
     private init() {}
 
     private var activity: Activity<RestActivityAttributes>?
+    private var lastWorkoutUpdateAt: Date?
 
-    func startRest(durationSeconds: Int, exerciseName: String?, workoutLabel: String?) {
+    // MARK: - New API
+    func startWorkout(exerciseName: String?, workoutLabel: String?, elapsed: Int = 0, setsCompleted: Int? = nil, setsPlanned: Int? = nil) {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+
+        let now = Date()
+        let end = now.addingTimeInterval(3600)
+        let attributes = RestActivityAttributes(workoutLabel: workoutLabel)
+        let state = RestActivityAttributes.ContentState(
+            isRest: false,
+            exerciseName: exerciseName ?? "Workout in Progress",
+            remainingSeconds: nil,
+            startedAt: now,
+            endsAt: end,
+            setsCompleted: setsCompleted,
+            setsPlanned: setsPlanned,
+            elapsedWorkoutSeconds: elapsed
+        )
+
+        if let current = activity {
+            Task {
+                if #available(iOS 16.2, *) {
+                    await current.update(ActivityContent(state: state, staleDate: nil))
+                } else {
+                    await current.update(using: state)
+                }
+            }
+            return
+        }
+
+        // End stray activities
+        for existing in Activity<RestActivityAttributes>.activities {
+            if #available(iOS 16.2, *) {
+                Task { await existing.end(ActivityContent(state: existing.content.state, staleDate: nil), dismissalPolicy: .immediate) }
+            } else {
+                Task { await existing.end(using: existing.contentState, dismissalPolicy: .immediate) }
+            }
+        }
+
+        do {
+            if #available(iOS 16.2, *) {
+                activity = try Activity.request(attributes: attributes, content: ActivityContent(state: state, staleDate: nil), pushType: nil)
+            } else {
+                activity = try Activity.request(attributes: attributes, contentState: state, pushType: nil)
+            }
+        } catch {
+            print("❌ LiveActivity: startWorkout error: \(error)")
+        }
+    }
+
+    func startRest(durationSeconds: Int, exerciseName: String?, workoutLabel: String?, setsCompleted: Int? = nil, setsPlanned: Int? = nil) {
         print("🔍 LiveActivity: Starting rest timer with \(durationSeconds) seconds")
         print("🔍 LiveActivity: Exercise: \(exerciseName ?? "nil")")
         print("🔍 LiveActivity: Workout: \(workoutLabel ?? "nil")")
@@ -30,21 +80,29 @@ final class LiveActivityManager {
             let start = Date()
             let end = start.addingTimeInterval(TimeInterval(durationSeconds))
             if #available(iOS 16.2, *) {
-                let previous = current.content.state
+                let prev = current.content.state
                 let state = RestActivityAttributes.ContentState(
+                    isRest: true,
+                    exerciseName: exerciseName ?? prev.exerciseName,
                     remainingSeconds: durationSeconds,
-                    exerciseName: exerciseName ?? previous.exerciseName,
                     startedAt: start,
-                    endsAt: end
+                    endsAt: end,
+                    setsCompleted: setsCompleted ?? prev.setsCompleted,
+                    setsPlanned: setsPlanned ?? prev.setsPlanned,
+                    elapsedWorkoutSeconds: prev.elapsedWorkoutSeconds
                 )
                 Task { await current.update(ActivityContent(state: state, staleDate: end)) }
             } else {
-                let previous = current.contentState
+                let prev = current.contentState
                 let state = RestActivityAttributes.ContentState(
+                    isRest: true,
+                    exerciseName: exerciseName ?? prev.exerciseName,
                     remainingSeconds: durationSeconds,
-                    exerciseName: exerciseName ?? previous.exerciseName,
                     startedAt: start,
-                    endsAt: end
+                    endsAt: end,
+                    setsCompleted: setsCompleted ?? prev.setsCompleted,
+                    setsPlanned: setsPlanned ?? prev.setsPlanned,
+                    elapsedWorkoutSeconds: prev.elapsedWorkoutSeconds
                 )
                 Task { await current.update(using: state) }
             }
@@ -71,10 +129,14 @@ final class LiveActivityManager {
         let end = start.addingTimeInterval(TimeInterval(durationSeconds))
         let attributes = RestActivityAttributes(workoutLabel: workoutLabel)
         let state = RestActivityAttributes.ContentState(
-            remainingSeconds: durationSeconds,
+            isRest: true,
             exerciseName: exerciseName,
+            remainingSeconds: durationSeconds,
             startedAt: start,
-            endsAt: end
+            endsAt: end,
+            setsCompleted: setsCompleted,
+            setsPlanned: setsPlanned,
+            elapsedWorkoutSeconds: 0
         )
         
         print("🔍 LiveActivity: Creating activity with attributes: \(attributes)")
@@ -112,24 +174,32 @@ final class LiveActivityManager {
             let end = now.addingTimeInterval(3600) // 1 hour default duration
             
             if #available(iOS 16.2, *) {
-                let previous = activity.content.state
+                let prev = activity.content.state
                 let state = RestActivityAttributes.ContentState(
-                    remainingSeconds: 0, // 0 means workout mode
-                    exerciseName: previous.exerciseName,
+                    isRest: false,
+                    exerciseName: prev.exerciseName,
+                    remainingSeconds: nil,
                     startedAt: now,
-                    endsAt: end
+                    endsAt: end,
+                    setsCompleted: prev.setsCompleted,
+                    setsPlanned: prev.setsPlanned,
+                    elapsedWorkoutSeconds: prev.elapsedWorkoutSeconds
                 )
                 Task { 
                     await activity.update(ActivityContent(state: state, staleDate: nil))
                     print("✅ LiveActivity: Updated to workout mode successfully")
                 }
             } else {
-                let previous = activity.contentState
+                let prev = activity.contentState
                 let state = RestActivityAttributes.ContentState(
-                    remainingSeconds: 0, // 0 means workout mode
-                    exerciseName: previous.exerciseName,
+                    isRest: false,
+                    exerciseName: prev.exerciseName,
+                    remainingSeconds: nil,
                     startedAt: now,
-                    endsAt: end
+                    endsAt: end,
+                    setsCompleted: prev.setsCompleted,
+                    setsPlanned: prev.setsPlanned,
+                    elapsedWorkoutSeconds: prev.elapsedWorkoutSeconds
                 )
                 Task { 
                     await activity.update(using: state)
@@ -143,25 +213,32 @@ final class LiveActivityManager {
         let end = now.addingTimeInterval(TimeInterval(max(0, seconds)))
         
         if #available(iOS 16.2, *) {
-            let previous = activity.content.state
+            let prev = activity.content.state
             let state = RestActivityAttributes.ContentState(
+                isRest: true,
+                exerciseName: prev.exerciseName,
                 remainingSeconds: seconds,
-                exerciseName: previous.exerciseName,
-                startedAt: previous.startedAt,
-                endsAt: end
+                startedAt: prev.startedAt,
+                endsAt: end,
+                setsCompleted: prev.setsCompleted,
+                setsPlanned: prev.setsPlanned,
+                elapsedWorkoutSeconds: prev.elapsedWorkoutSeconds
             )
             Task {
-                // While resting, set staleDate to end time so the system updates UI timely
                 await activity.update(ActivityContent(state: state, staleDate: end))
                 print("✅ LiveActivity: Updated successfully")
             }
         } else {
-            let previous = activity.contentState
+            let prev = activity.contentState
             let state = RestActivityAttributes.ContentState(
+                isRest: true,
+                exerciseName: prev.exerciseName,
                 remainingSeconds: seconds,
-                exerciseName: previous.exerciseName,
-                startedAt: previous.startedAt,
-                endsAt: end
+                startedAt: prev.startedAt,
+                endsAt: end,
+                setsCompleted: prev.setsCompleted,
+                setsPlanned: prev.setsPlanned,
+                elapsedWorkoutSeconds: prev.elapsedWorkoutSeconds
             )
             Task { 
                 await activity.update(using: state)
@@ -180,19 +257,27 @@ final class LiveActivityManager {
             if #available(iOS 16.2, *) {
                 let previous = existingActivity.content.state
                 let finalState = RestActivityAttributes.ContentState(
-                    remainingSeconds: 0,
+                    isRest: false,
                     exerciseName: previous.exerciseName,
+                    remainingSeconds: nil,
                     startedAt: previous.startedAt,
-                    endsAt: Date()
+                    endsAt: Date(),
+                    setsCompleted: previous.setsCompleted,
+                    setsPlanned: previous.setsPlanned,
+                    elapsedWorkoutSeconds: previous.elapsedWorkoutSeconds
                 )
                 Task { await existingActivity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: .immediate) }
             } else {
                 let previous = existingActivity.contentState
                 let finalState = RestActivityAttributes.ContentState(
-                    remainingSeconds: 0,
+                    isRest: false,
                     exerciseName: previous.exerciseName,
+                    remainingSeconds: nil,
                     startedAt: previous.startedAt,
-                    endsAt: Date()
+                    endsAt: Date(),
+                    setsCompleted: previous.setsCompleted,
+                    setsPlanned: previous.setsPlanned,
+                    elapsedWorkoutSeconds: previous.elapsedWorkoutSeconds
                 )
                 Task { await existingActivity.end(using: finalState, dismissalPolicy: .immediate) }
             }
@@ -201,6 +286,42 @@ final class LiveActivityManager {
         // Clear our reference
         self.activity = nil
         print("🔍 LiveActivity: All activities ended and cleared")
+    }
+
+    // Finish the entire workout and end the Live Activity immediately
+    func finishWorkout() {
+        print("🏁 LiveActivity: Finishing workout and ending activity")
+        guard !Activity<RestActivityAttributes>.activities.isEmpty else { return }
+        for existingActivity in Activity<RestActivityAttributes>.activities {
+            if #available(iOS 16.2, *) {
+                let previous = existingActivity.content.state
+                let finalState = RestActivityAttributes.ContentState(
+                    isRest: false,
+                    exerciseName: previous.exerciseName,
+                    remainingSeconds: nil,
+                    startedAt: previous.startedAt,
+                    endsAt: Date(),
+                    setsCompleted: previous.setsCompleted,
+                    setsPlanned: previous.setsPlanned,
+                    elapsedWorkoutSeconds: previous.elapsedWorkoutSeconds
+                )
+                Task { await existingActivity.end(ActivityContent(state: finalState, staleDate: nil), dismissalPolicy: .immediate) }
+            } else {
+                let previous = existingActivity.contentState
+                let finalState = RestActivityAttributes.ContentState(
+                    isRest: false,
+                    exerciseName: previous.exerciseName,
+                    remainingSeconds: nil,
+                    startedAt: previous.startedAt,
+                    endsAt: Date(),
+                    setsCompleted: previous.setsCompleted,
+                    setsPlanned: previous.setsPlanned,
+                    elapsedWorkoutSeconds: previous.elapsedWorkoutSeconds
+                )
+                Task { await existingActivity.end(using: finalState, dismissalPolicy: .immediate) }
+            }
+        }
+        self.activity = nil
     }
     
     // Start a workout session Live Activity (for when app goes to background during workout)
@@ -254,10 +375,14 @@ final class LiveActivityManager {
         let end = start.addingTimeInterval(3600) // 1 hour default duration
         let attributes = RestActivityAttributes(workoutLabel: workoutLabel)
         let state = RestActivityAttributes.ContentState(
-            remainingSeconds: 0, // 0 means no countdown, just showing workout info
+            isRest: false,
             exerciseName: exerciseName ?? "Workout in Progress",
+            remainingSeconds: nil,
             startedAt: start,
-            endsAt: end
+            endsAt: end,
+            setsCompleted: nil,
+            setsPlanned: nil,
+            elapsedWorkoutSeconds: 0
         )
         
         print("🔍 LiveActivity: Creating workout session activity")
@@ -283,18 +408,44 @@ final class LiveActivityManager {
     }
     
     // Update existing workout Live Activity with new exercise info
-    func updateWorkoutInfo(exerciseName: String?) async {
+    func updateWorkoutInfo(exerciseName: String?, setsCompleted: Int? = nil, setsPlanned: Int? = nil, elapsed: Int? = nil) async {
         guard let activity = activity else { return }
-        
+        // Throttle to every ~20s
         let now = Date()
+        if let last = lastWorkoutUpdateAt, now.timeIntervalSince(last) < 15 {
+            return
+        }
+        lastWorkoutUpdateAt = now
         let end = now.addingTimeInterval(3600)
+
+        var prevExerciseName: String?
+        var prevSetsCompleted: Int?
+        var prevSetsPlanned: Int?
+        var prevElapsed: Int = 0
+        if #available(iOS 16.2, *) {
+            let prev = activity.content.state
+            prevExerciseName = prev.exerciseName
+            prevSetsCompleted = prev.setsCompleted
+            prevSetsPlanned = prev.setsPlanned
+            prevElapsed = prev.elapsedWorkoutSeconds
+        } else {
+            let prev = activity.contentState
+            prevExerciseName = prev.exerciseName
+            prevSetsCompleted = prev.setsCompleted
+            prevSetsPlanned = prev.setsPlanned
+            prevElapsed = prev.elapsedWorkoutSeconds
+        }
+
         let state = RestActivityAttributes.ContentState(
-            remainingSeconds: 0,
-            exerciseName: exerciseName ?? "Workout in Progress",
+            isRest: false,
+            exerciseName: exerciseName ?? prevExerciseName ?? "Workout in Progress",
+            remainingSeconds: nil,
             startedAt: now,
-            endsAt: end
+            endsAt: end,
+            setsCompleted: setsCompleted ?? prevSetsCompleted,
+            setsPlanned: setsPlanned ?? prevSetsPlanned,
+            elapsedWorkoutSeconds: elapsed ?? prevElapsed
         )
-        
         Task {
             if #available(iOS 16.2, *) {
                 await activity.update(ActivityContent(state: state, staleDate: nil))

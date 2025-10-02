@@ -112,7 +112,14 @@ struct SettingsView: View {
                     subtitle: "\(settings.defaultRestSeconds) שניות",
                     iconColor: .blue
                 ) {
-                    EmptyView()
+                    Stepper(value: Binding(
+                        get: { settings.defaultRestSeconds },
+                        set: { settings.defaultRestSeconds = max(10, min(600, $0)) }
+                    ), in: 10...600, step: 5) {
+                        Text("\(settings.defaultRestSeconds) שניות")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 
                 SettingRow(
@@ -121,7 +128,14 @@ struct SettingsView: View {
                     subtitle: settings.autoProgressionMode == .percent ? "אחוזים" : "מחזור חזרות",
                     iconColor: .green
                 ) {
-                    EmptyView()
+                    Picker("מצב התקדמות", selection: Binding(
+                        get: { settings.autoProgressionMode },
+                        set: { settings.autoProgressionMode = $0 }
+                    )) {
+                        Text("אחוזים").tag(AppSettings.AutoProgressionMode.percent)
+                        Text("מחזור חזרות").tag(AppSettings.AutoProgressionMode.repCycle)
+                    }
+                    .pickerStyle(.segmented)
                 }
                 
                 if settings.autoProgressionMode == .percent {
@@ -131,7 +145,13 @@ struct SettingsView: View {
                         subtitle: "\(String(format: "%.1f", settings.autoProgressionPercent))%",
                         iconColor: .purple
                     ) {
-                        EmptyView()
+                        Slider(value: Binding(
+                            get: { settings.autoProgressionPercent },
+                            set: { settings.autoProgressionPercent = max(0, min(20, $0)) }
+                        ), in: 0...20, step: 0.5) {
+                            Text("")
+                        }
+                        .tint(.purple)
                     }
                 }
                 
@@ -141,7 +161,18 @@ struct SettingsView: View {
                     subtitle: "\(String(format: "%.1f", settings.weightIncrementKg)) ק״ג",
                     iconColor: .red
                 ) {
-                    EmptyView()
+                    HStack(spacing: 8) {
+                        Button(action: { settings.weightIncrementKg = max(0.5, settings.weightIncrementKg - 0.5) }) {
+                            Image(systemName: "minus.circle.fill").foregroundStyle(.red)
+                        }
+                        Text("\(String(format: "%.1f", settings.weightIncrementKg)) ק" + "\"" + "ג")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .frame(minWidth: 60)
+                        Button(action: { settings.weightIncrementKg = min(10.0, settings.weightIncrementKg + 0.5) }) {
+                            Image(systemName: "plus.circle.fill").foregroundStyle(.green)
+                        }
+                    }
                 }
             }
         }

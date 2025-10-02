@@ -15,7 +15,7 @@ struct RestLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: RestActivityAttributes.self) { context in
             // LOCK SCREEN - Professional gym tracker design
-            VStack(spacing: 20) {
+            VStack(spacing: 14) {
                 // Professional header
                 HStack {
                     ZStack {
@@ -25,220 +25,256 @@ struct RestLiveActivity: Widget {
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ))
-                            .frame(width: 50, height: 50)
+                            .frame(width: 36, height: 36)
                         
                         Image(systemName: "figure.strengthtraining.traditional")
-                            .font(.title2)
+                            .font(.headline)
                             .foregroundColor(.white)
                     }
                     
                     VStack(alignment: .leading, spacing: 2) {
                         Text("GymTracker")
-                            .font(.headline)
+                            .font(.subheadline)
                             .fontWeight(.bold)
                             .foregroundColor(.white)
                         
                         Text(context.attributes.workoutLabel ?? "אימון")
-                            .font(.caption)
+                            .font(.caption2)
                             .foregroundColor(.white.opacity(0.8))
                     }
                     
                     Spacer()
                 }
                 
-                // Consider rest state active if current time is before endsAt
-                if Date() < context.state.endsAt {
-                    // Rest timer - Professional design
+                // Consider rest state active if current time is before endsAt AND state indicates rest
+                if context.state.isRest && Date() < context.state.endsAt {
+                    // Rest timer - Compact Apple style
                     VStack(spacing: 16) {
-                        Text("מנוחה")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
+                        VStack(spacing: 6) {
+                            Text("מנוחה")
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                            
+                            Text(context.state.exerciseName ?? "תרגיל הבא")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundColor(.white.opacity(0.8))
+                                .multilineTextAlignment(.center)
+                        }
                         
-                        Text(context.state.exerciseName ?? "תרגיל הבא")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.9))
-                            .multilineTextAlignment(.center)
-                        
-                        // Professional timer with progress ring
-                        ZStack {
-                            // Background ring
-                            Circle()
-                                .stroke(Color.white.opacity(0.2), lineWidth: 6)
-                                .frame(width: 120, height: 120)
-                            
-                            // Progress ring based on time window
-                            let total = max(1.0, context.state.endsAt.timeIntervalSince(context.state.startedAt))
-                            let remaining = max(0.0, context.state.endsAt.timeIntervalSince(Date()))
-                            let progress = max(0.0, min(1.0, remaining / total))
-                            
-                            Circle()
-                                .trim(from: 0, to: progress)
-                                .stroke(
-                                    LinearGradient(
-                                        colors: [Color.blue, Color.cyan],
-                                        startPoint: .topLeading,
-                                        endPoint: .bottomTrailing
-                                    ),
-                                    style: StrokeStyle(lineWidth: 6, lineCap: .round)
-                                )
-                                .frame(width: 120, height: 120)
-                                .rotationEffect(.degrees(-90))
-                                .animation(.easeInOut(duration: 1), value: remaining)
-                            
-                            // Timer text
-                            VStack(spacing: 2) {
-                                Text(timerInterval: Date()...context.state.endsAt)
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                                    .monospacedDigit()
-                                    .foregroundColor(.white)
-                                
-                                Text("דקות")
-                                    .font(.caption)
-                                    .foregroundColor(.white.opacity(0.7))
+                        // Compact timer with progress ring
+                        TimelineView(.periodic(from: .now, by: 1)) { timeline in
+                            ZStack {
+                                // Background ring
+                                Circle()
+                                    .stroke(Color.white.opacity(0.1), lineWidth: 6)
+                                    .frame(width: 100, height: 100)
+
+                                // Progress ring
+                                let total = max(1.0, context.state.endsAt.timeIntervalSince(context.state.startedAt))
+                                let remaining = max(0.0, context.state.endsAt.timeIntervalSince(timeline.date))
+                                let progress = max(0.0, min(1.0, remaining / total))
+
+                                Circle()
+                                    .trim(from: 0, to: progress)
+                                    .stroke(
+                                        LinearGradient(
+                                            colors: [Color.blue, Color.cyan],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        ),
+                                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
+                                    )
+                                    .frame(width: 100, height: 100)
+                                    .rotationEffect(.degrees(-90))
+
+                                // Timer text
+                                VStack(spacing: 2) {
+                                    Text(timerInterval: timeline.date...context.state.endsAt)
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
+                                        .monospacedDigit()
+                                        .foregroundColor(.white)
+
+                                    Text("דקות")
+                                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.7))
+                                }
                             }
                         }
                         
-                        // Professional control buttons
+                        // Compact control buttons
                         HStack(spacing: 12) {
                             Link(destination: URL(string: "gymtracker://rest/skip")!) {
-                                VStack(spacing: 4) {
+                                VStack(spacing: 3) {
                                     Image(systemName: "forward.fill")
-                                        .font(.title3)
+                                        .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(.white)
                                     Text("דלג")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
+                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
                                         .foregroundColor(.white)
                                 }
-                                .frame(width: 60, height: 50)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.blue.opacity(0.8))
+                                        .fill(Color.blue)
+                                        .shadow(color: .blue.opacity(0.3), radius: 4, y: 2)
                                 )
                             }
                             
                             Link(destination: URL(string: "gymtracker://rest/stop")!) {
-                                VStack(spacing: 4) {
+                                VStack(spacing: 3) {
                                     Image(systemName: "stop.fill")
-                                        .font(.title3)
+                                        .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(.white)
                                     Text("עצור")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
+                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
                                         .foregroundColor(.white)
                                 }
-                                .frame(width: 60, height: 50)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.red.opacity(0.8))
+                                        .fill(Color.red)
+                                        .shadow(color: .red.opacity(0.3), radius: 4, y: 2)
                                 )
                             }
                             
                             Link(destination: URL(string: "gymtracker://rest/addminute")!) {
-                                VStack(spacing: 4) {
+                                VStack(spacing: 3) {
                                     Image(systemName: "plus.circle.fill")
-                                        .font(.title3)
+                                        .font(.system(size: 16, weight: .medium))
                                         .foregroundColor(.white)
                                     Text("+1 דק׳")
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
+                                        .font(.system(size: 11, weight: .semibold, design: .rounded))
                                         .foregroundColor(.white)
                                 }
-                                .frame(width: 60, height: 50)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 44)
                                 .background(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .fill(Color.green.opacity(0.8))
+                                        .fill(Color.green)
+                                        .shadow(color: .green.opacity(0.3), radius: 4, y: 2)
                                 )
                             }
                         }
                     }
                 } else {
-                    // Workout in progress - Professional design
+                    // Workout in progress - Compact Apple style
                     VStack(spacing: 16) {
-                        Text("אימון פעיל")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                        
-                        Text(context.state.exerciseName ?? "תרגיל נוכחי")
-                            .font(.subheadline)
-                            .foregroundColor(.white.opacity(0.9))
-                            .multilineTextAlignment(.center)
-                        
-                        // Professional workout controls
+                        VStack(spacing: 6) {
+                            Text("אימון פעיל")
+                                .font(.system(size: 18, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                            
+                            Text(context.state.exerciseName ?? "תרגיל נוכחי")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundColor(.white.opacity(0.8))
+                                .multilineTextAlignment(.center)
+                            
+                            // Sets info with compact pill design
+                            if let completed = context.state.setsCompleted, let planned = context.state.setsPlanned {
+                                HStack(spacing: 6) {
+                                    Text("\(completed)")
+                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white)
+                                    Text("/")
+                                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.6))
+                                    Text("\(planned)")
+                                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                                        .foregroundColor(.white.opacity(0.8))
+                                }
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(
+                                    Capsule()
+                                        .fill(Color.white.opacity(0.15))
+                                        .overlay(
+                                            Capsule()
+                                                .stroke(Color.white.opacity(0.2), lineWidth: 1)
+                                        )
+                                )
+                            }
+                        }
+
+                        // Compact control grid - 2x2 layout
                         VStack(spacing: 12) {
-                            // Primary actions
+                            // Top row
                             HStack(spacing: 12) {
                                 Link(destination: URL(string: "gymtracker://workout/logset")!) {
-                                    VStack(spacing: 4) {
+                                    VStack(spacing: 3) {
                                         Image(systemName: "plus.circle.fill")
-                                            .font(.title3)
+                                            .font(.system(size: 16, weight: .medium))
                                             .foregroundColor(.white)
                                         Text("הוסף סט")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
+                                            .font(.system(size: 11, weight: .semibold, design: .rounded))
                                             .foregroundColor(.white)
                                     }
-                                    .frame(width: 70, height: 50)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.green.opacity(0.8))
+                                            .fill(Color.green)
+                                            .shadow(color: .green.opacity(0.3), radius: 4, y: 2)
                                     )
                                 }
                                 
                                 Link(destination: URL(string: "gymtracker://workout/nextexercise")!) {
-                                    VStack(spacing: 4) {
+                                    VStack(spacing: 3) {
                                         Image(systemName: "arrow.right.circle.fill")
-                                            .font(.title3)
+                                            .font(.system(size: 16, weight: .medium))
                                             .foregroundColor(.white)
                                         Text("הבא")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
+                                            .font(.system(size: 11, weight: .semibold, design: .rounded))
                                             .foregroundColor(.white)
                                     }
-                                    .frame(width: 70, height: 50)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 44)
                                     .background(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.blue.opacity(0.8))
+                                            .fill(Color.blue)
+                                            .shadow(color: .blue.opacity(0.3), radius: 4, y: 2)
                                     )
                                 }
                             }
                             
-                            // Secondary actions
+                            // Bottom row
                             HStack(spacing: 12) {
                                 Link(destination: URL(string: "gymtracker://workout/startrest")!) {
-                                    VStack(spacing: 4) {
+                                    VStack(spacing: 2) {
                                         Image(systemName: "timer")
-                                            .font(.title3)
+                                            .font(.system(size: 14, weight: .medium))
                                             .foregroundColor(.white)
                                         Text("מנוחה")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
+                                            .font(.system(size: 10, weight: .semibold, design: .rounded))
                                             .foregroundColor(.white)
+                                            .lineLimit(1)
                                     }
-                                    .frame(width: 70, height: 50)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 40)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.orange.opacity(0.8))
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.orange)
+                                            .shadow(color: .orange.opacity(0.3), radius: 4, y: 2)
                                     )
                                 }
                                 
                                 Link(destination: URL(string: "gymtracker://workout/finish")!) {
-                                    VStack(spacing: 4) {
+                                    VStack(spacing: 2) {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .font(.title3)
+                                            .font(.system(size: 14, weight: .medium))
                                             .foregroundColor(.white)
                                         Text("סיים")
-                                            .font(.caption)
-                                            .fontWeight(.semibold)
+                                            .font(.system(size: 10, weight: .semibold, design: .rounded))
                                             .foregroundColor(.white)
+                                            .lineLimit(1)
                                     }
-                                    .frame(width: 70, height: 50)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 40)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.red.opacity(0.8))
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.red)
+                                            .shadow(color: .red.opacity(0.3), radius: 4, y: 2)
                                     )
                                 }
                             }
@@ -246,7 +282,7 @@ struct RestLiveActivity: Widget {
                     }
                 }
             }
-            .padding(24)
+            .padding(16)
             .background(
                 RoundedRectangle(cornerRadius: 20)
                     .fill(
@@ -280,203 +316,231 @@ struct RestLiveActivity: Widget {
                     HStack(spacing: 8) {
                         ZStack {
                             Circle()
-                                .fill(Color.blue.opacity(0.8))
-                                .frame(width: 32, height: 32)
-                            
-                            Image(systemName: "figure.strengthtraining.traditional")
-                                .font(.caption)
+                                .fill(Color.blue.opacity(0.9))
+                                .frame(width: 28, height: 28)
+                            Image(systemName: "dumbbell.fill")
+                                .font(.system(size: 12, weight: .medium))
                                 .foregroundColor(.white)
                         }
-                        
                         VStack(alignment: .leading, spacing: 2) {
                             Text(context.state.exerciseName ?? "אימון")
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
+                                .font(.system(size: 13, weight: .semibold, design: .rounded))
                                 .foregroundColor(.white)
                                 .lineLimit(1)
-                            
                             Text(context.attributes.workoutLabel ?? "")
-                                .font(.caption2)
+                                .font(.system(size: 10, weight: .medium, design: .rounded))
                                 .foregroundColor(.white.opacity(0.7))
                         }
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    if Date() < context.state.endsAt {
+                    if context.state.isRest && Date() < context.state.endsAt {
                         VStack(alignment: .trailing, spacing: 4) {
                             Text(timerInterval: context.state.startedAt...context.state.endsAt)
-                                .font(.headline)
-                                .fontWeight(.bold)
+                                .font(.system(size: 16, weight: .semibold, design: .rounded))
                                 .monospacedDigit()
                                 .foregroundColor(.white)
                             
-                            Text("מנוחה")
-                                .font(.caption2)
-                                .foregroundColor(.white.opacity(0.7))
+                            HStack(spacing: 4) {
+                                Circle()
+                                    .fill(Color.orange)
+                                    .frame(width: 6, height: 6)
+                                Text("מנוחה")
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.white.opacity(0.7))
+                                    .tracking(0.5)
+                            }
                         }
                     } else {
                         VStack(alignment: .trailing, spacing: 4) {
-                            Image(systemName: "play.circle.fill")
-                                .font(.title3)
-                                .foregroundColor(.green)
-                            
-                            Text("פעיל")
-                                .font(.caption2)
-                                .foregroundColor(.white.opacity(0.7))
+                            if let completed = context.state.setsCompleted, let planned = context.state.setsPlanned {
+                                Text("\(completed)/\(planned)")
+                                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                                    .monospacedDigit()
+                                    .foregroundColor(.white)
+                                Text("סטים")
+                                    .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.white.opacity(0.7))
+                                    .tracking(0.5)
+                            } else {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.system(size: 20, weight: .medium))
+                                    .foregroundColor(.green)
+                                    .shadow(color: .green.opacity(0.5), radius: 2)
+                                
+                                HStack(spacing: 4) {
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 6, height: 6)
+                                    Text("פעיל")
+                                        .font(.system(size: 10, weight: .bold, design: .monospaced))
+                                        .foregroundColor(.white.opacity(0.7))
+                                        .tracking(0.5)
+                                }
+                            }
                         }
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    if Date() < context.state.endsAt {
-                        // Rest timer controls - Professional design
-                        HStack(spacing: 16) {
+                    // Show rest controls ONLY when explicitly in rest mode
+                    if context.state.isRest && Date() < context.state.endsAt {
+                        // Rest timer controls - Apple Music style
+                        HStack(spacing: 12) {
                             Link(destination: URL(string: "gymtracker://rest/skip")!) {
-                                VStack(spacing: 2) {
+                                VStack(spacing: 3) {
                                     Image(systemName: "forward.fill")
-                                        .font(.caption)
+                                        .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.white)
                                     Text("דלג")
-                                        .font(.caption2)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.white)
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.9))
                                 }
-                                .frame(width: 50, height: 40)
+                                .frame(width: 44, height: 36)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.blue.opacity(0.8))
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.blue.opacity(0.9))
+                                        .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                                 )
                             }
                             
                             Link(destination: URL(string: "gymtracker://rest/stop")!) {
-                                VStack(spacing: 2) {
+                                VStack(spacing: 3) {
                                     Image(systemName: "stop.fill")
-                                        .font(.caption)
+                                        .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.white)
                                     Text("עצור")
-                                        .font(.caption2)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.white)
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.9))
                                 }
-                                .frame(width: 50, height: 40)
+                                .frame(width: 44, height: 36)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.red.opacity(0.8))
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.red.opacity(0.9))
+                                        .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                                 )
                             }
                             
                             Link(destination: URL(string: "gymtracker://rest/addminute")!) {
-                                VStack(spacing: 2) {
+                                VStack(spacing: 3) {
                                     Image(systemName: "plus.circle.fill")
-                                        .font(.caption)
+                                        .font(.system(size: 12, weight: .medium))
                                         .foregroundColor(.white)
                                     Text("+1 דק׳")
-                                        .font(.caption2)
-                                        .fontWeight(.semibold)
-                                        .foregroundColor(.white)
+                                        .font(.system(size: 9, weight: .medium))
+                                        .foregroundColor(.white.opacity(0.9))
                                 }
-                                .frame(width: 50, height: 40)
+                                .frame(width: 44, height: 36)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(Color.green.opacity(0.8))
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.green.opacity(0.9))
+                                        .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                                 )
                             }
                         }
+                        .padding(.horizontal, 8)
                     } else {
-                        // Workout session controls - Professional design
-                        VStack(spacing: 8) {
-                            HStack(spacing: 16) {
+                        // Workout session controls - Apple Music style
+                        VStack(spacing: 6) {
+                            HStack(spacing: 12) {
                                 Link(destination: URL(string: "gymtracker://workout/logset")!) {
-                                    VStack(spacing: 2) {
+                                    VStack(spacing: 3) {
                                         Image(systemName: "plus.circle.fill")
-                                            .font(.caption)
+                                            .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(.white)
                                         Text("הוסף סט")
-                                            .font(.caption2)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.white)
+                                            .font(.system(size: 9, weight: .medium))
+                                            .foregroundColor(.white.opacity(0.9))
                                     }
-                                    .frame(width: 60, height: 40)
+                                    .frame(width: 52, height: 36)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.green.opacity(0.8))
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.green.opacity(0.9))
+                                            .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                                     )
                                 }
                                 
                                 Link(destination: URL(string: "gymtracker://workout/nextexercise")!) {
-                                    VStack(spacing: 2) {
+                                    VStack(spacing: 3) {
                                         Image(systemName: "arrow.right.circle.fill")
-                                            .font(.caption)
+                                            .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(.white)
                                         Text("הבא")
-                                            .font(.caption2)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.white)
+                                            .font(.system(size: 9, weight: .medium))
+                                            .foregroundColor(.white.opacity(0.9))
                                     }
-                                    .frame(width: 60, height: 40)
+                                    .frame(width: 52, height: 36)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.blue.opacity(0.8))
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.blue.opacity(0.9))
+                                            .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                                     )
                                 }
                             }
                             
-                            HStack(spacing: 16) {
+                            HStack(spacing: 12) {
                                 Link(destination: URL(string: "gymtracker://workout/startrest")!) {
-                                    VStack(spacing: 2) {
+                                    VStack(spacing: 3) {
                                         Image(systemName: "timer")
-                                            .font(.caption)
+                                            .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(.white)
                                         Text("מנוחה")
-                                            .font(.caption2)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.white)
+                                            .font(.system(size: 9, weight: .medium))
+                                            .foregroundColor(.white.opacity(0.9))
                                     }
-                                    .frame(width: 60, height: 40)
+                                    .frame(width: 52, height: 36)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.orange.opacity(0.8))
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.orange.opacity(0.9))
+                                            .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                                     )
                                 }
                                 
                                 Link(destination: URL(string: "gymtracker://workout/finish")!) {
-                                    VStack(spacing: 2) {
+                                    VStack(spacing: 3) {
                                         Image(systemName: "checkmark.circle.fill")
-                                            .font(.caption)
+                                            .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(.white)
                                         Text("סיים")
-                                            .font(.caption2)
-                                            .fontWeight(.semibold)
-                                            .foregroundColor(.white)
+                                            .font(.system(size: 9, weight: .medium))
+                                            .foregroundColor(.white.opacity(0.9))
                                     }
-                                    .frame(width: 60, height: 40)
+                                    .frame(width: 52, height: 36)
                                     .background(
-                                        RoundedRectangle(cornerRadius: 8)
-                                            .fill(Color.red.opacity(0.8))
+                                        RoundedRectangle(cornerRadius: 10)
+                                            .fill(Color.red.opacity(0.9))
+                                            .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
                                     )
                                 }
                             }
                         }
+                        .padding(.horizontal, 8)
                     }
                 }
             } compactLeading: {
-                Image(systemName: Date() < context.state.endsAt ? "timer" : "figure.strengthtraining.traditional")
-                    .font(.caption)
+                Image(systemName: (context.state.isRest && Date() < context.state.endsAt) ? "timer" : "dumbbell.fill")
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.white)
             } compactTrailing: {
-                if Date() < context.state.endsAt {
+                if context.state.isRest && Date() < context.state.endsAt {
                     Text(timerInterval: Date()...context.state.endsAt)
-                        .font(.caption)
-                        .fontWeight(.semibold)
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
                         .monospacedDigit()
                         .foregroundColor(.white)
                 } else {
-                    Image(systemName: "play.circle.fill")
-                        .font(.caption)
-                        .foregroundColor(.green)
+                    if let completed = context.state.setsCompleted, let planned = context.state.setsPlanned {
+                        Text("\(completed)/\(planned)")
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundColor(.white)
+                    } else {
+                        Image(systemName: "play.circle.fill")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.green)
+                    }
                 }
             } minimal: {
-                Image(systemName: Date() < context.state.endsAt ? "timer" : "figure.strengthtraining.traditional")
-                    .font(.caption)
+                Image(systemName: (context.state.isRest && Date() < context.state.endsAt) ? "timer" : "dumbbell.fill")
+                    .font(.system(size: 12, weight: .medium))
                     .foregroundColor(.white)
             }
         }

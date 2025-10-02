@@ -62,7 +62,7 @@ final class Exercise {
     var notes: String?
     var label: String?
     // Order of the exercise within its workout label (A/B/C or Full)
-    var orderIndex: Int
+    var orderIndex: Int?
     var muscleGroup: String?
     var equipment: String?
     var isBodyweight: Bool?

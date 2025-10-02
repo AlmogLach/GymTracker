@@ -13,16 +13,33 @@ import ActivityKit
 @available(iOS 16.1, *)
 public struct RestActivityAttributes: ActivityAttributes {
     public struct ContentState: Codable, Hashable {
-        var remainingSeconds: Int
+        var isRest: Bool
         var exerciseName: String?
+        var remainingSeconds: Int?
         var startedAt: Date
         var endsAt: Date
+        var setsCompleted: Int?
+        var setsPlanned: Int?
+        var elapsedWorkoutSeconds: Int
         
-        public init(remainingSeconds: Int, exerciseName: String?, startedAt: Date, endsAt: Date) {
-            self.remainingSeconds = remainingSeconds
+        public init(
+            isRest: Bool,
+            exerciseName: String?,
+            remainingSeconds: Int? = nil,
+            startedAt: Date,
+            endsAt: Date,
+            setsCompleted: Int? = nil,
+            setsPlanned: Int? = nil,
+            elapsedWorkoutSeconds: Int
+        ) {
+            self.isRest = isRest
             self.exerciseName = exerciseName
+            self.remainingSeconds = remainingSeconds
             self.startedAt = startedAt
             self.endsAt = endsAt
+            self.setsCompleted = setsCompleted
+            self.setsPlanned = setsPlanned
+            self.elapsedWorkoutSeconds = elapsedWorkoutSeconds
         }
     }
     var workoutLabel: String?

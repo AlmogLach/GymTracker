@@ -480,110 +480,116 @@ struct EditPlanSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                headerSection
-                tabBar
-                selectedTabContent
-            }
-            .background(AppTheme.screenBG)
-            .navigationTitle("עריכת תוכנית")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("ביטול") { dismiss() }
+        NavigationStack { mainContent }
+            .sheet(isPresented: $showAddExercise) { addExerciseSheet }
+            .sheet(isPresented: $showExerciseLibrary) { exerciseLibrarySheet }
+            .sheet(isPresented: $showReorderExercises) { reorderSheet }
+            .sheet(item: $editingExercise) { exercise in exerciseEditSheet(exercise) }
+            .alert("מחיקת תרגיל", isPresented: $showDeleteConfirmation) {
+                Button("מחק", role: .destructive) { deleteSelectedExercise() }
+                Button("ביטול", role: .cancel) { exerciseToDelete = nil }
+            } message: { Text("האם אתה בטוח שברצונך למחוק את התרגיל '\(exerciseToDelete?.name ?? "")'?") }
+    }
+
+    private var mainContent: some View {
+        VStack(spacing: 0) {
+            headerSection
+            tabBar
+            selectedTabContent
+        }
+        .background(AppTheme.screenBG)
+        .navigationTitle("עריכת תוכנית")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("ביטול") { dismiss() }
                     .font(.subheadline)
                     .fontWeight(.medium)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("שמור") { savePlan() }
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button("שמור") { savePlan() }
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                        .disabled(planName.isEmpty)
-                }
-            }
-            .onChange(of: planType) { _, _ in
-                normalizeScheduleForPlanType()
-                normalizeExercisesForPlanType()
-            }
-            .onChange(of: planType) { _, newType in
-                selectedExerciseLabel = newType.workoutLabels.first ?? selectedExerciseLabel
-            }
-            .sheet(isPresented: $showAddExercise) {
-                AddExerciseSheet { exercise in
-                    // Set default label according to plan type
-                    if planType == .fullBody {
-                        exercise.label = planType.workoutLabels.first
-                    } else {
-                        exercise.label = selectedExerciseLabel
-                    }
-                    exercises.append(exercise)
-                }
-            }
-            .sheet(isPresented: $showExerciseLibrary) {
-                ExerciseLibrarySheet { exercise in
-                    let newExercise = Exercise(
-                        name: exercise.name,
-                        plannedSets: 3,
-                        plannedReps: 8,
-                        muscleGroup: exercise.bodyPart.rawValue,
-                        equipment: exercise.equipment,
-                        isBodyweight: exercise.isBodyweight
-                    )
-                    // Default label by plan type / current selection
-                    newExercise.label = planType == .fullBody ? planType.workoutLabels.first : selectedExerciseLabel
-                    // Append to end of that label group by orderIndex
-                    let label = newExercise.label ?? planType.workoutLabels.first ?? ""
-                    let currentMax = exercises.filter { ($0.label ?? label) == label }.map { $0.orderIndex }.max() ?? -1
-                    newExercise.orderIndex = currentMax + 1
-                    exercises.append(newExercise)
-                }
-            }
-            .sheet(isPresented: $showReorderExercises) {
-                PlanExercisesReorderSheet(
-                    planType: planType,
-                    labels: planType.workoutLabels,
-                    exercises: exercises,
-                    onSave: { newOrder in
-                        // Persist order index per label
-                        var counters: [String: Int] = [:]
-                        for idx in newOrder.indices {
-                            let label = newOrder[idx].label ?? planType.workoutLabels.first ?? ""
-                            let next = (counters[label] ?? 0)
-                            newOrder[idx].orderIndex = next
-                            counters[label] = next + 1
-                        }
-                        exercises = newOrder
-                    }
-                )
-            }
-            .sheet(item: $editingExercise) { exercise in
-            ExerciseEditSheet(
-                exercise: exercise,
-                onSave: { updatedExercise in
-                        if let index = exercises.firstIndex(where: { $0.id == exercise.id }) {
-                            exercises[index] = updatedExercise
-                    }
-                    editingExercise = nil
-                },
-                    onCancel: { editingExercise = nil }
-                )
-            }
-            .alert("מחיקת תרגיל", isPresented: $showDeleteConfirmation) {
-                Button("מחק", role: .destructive) {
-                    if let exercise = exerciseToDelete,
-                       let index = exercises.firstIndex(where: { $0.id == exercise.id }) {
-                        exercises.remove(at: index)
-                    }
-                    exerciseToDelete = nil
-                }
-                Button("ביטול", role: .cancel) {
-                    exerciseToDelete = nil
-                }
-            } message: {
-                Text("האם אתה בטוח שברצונך למחוק את התרגיל '\(exerciseToDelete?.name ?? "")'?")
+                    .disabled(planName.isEmpty)
             }
         }
+        .onChange(of: planType) { _, _ in
+            normalizeScheduleForPlanType()
+            normalizeExercisesForPlanType()
+        }
+        .onChange(of: planType) { _, newType in
+            selectedExerciseLabel = newType.workoutLabels.first ?? selectedExerciseLabel
+        }
+    }
+
+    // MARK: - Sheet Builders
+    private var addExerciseSheet: some View {
+        AddExerciseSheet { exercise in
+            if planType == .fullBody {
+                exercise.label = planType.workoutLabels.first
+            } else {
+                exercise.label = selectedExerciseLabel
+            }
+            exercises.append(exercise)
+        }
+    }
+
+    private var exerciseLibrarySheet: some View {
+        ExerciseLibrarySheet { exercise in
+            let newExercise = Exercise(
+                name: exercise.name,
+                plannedSets: 3,
+                plannedReps: 8,
+                muscleGroup: exercise.bodyPart.rawValue,
+                equipment: exercise.equipment,
+                isBodyweight: exercise.isBodyweight
+            )
+            newExercise.label = planType == .fullBody ? planType.workoutLabels.first : selectedExerciseLabel
+            let label = newExercise.label ?? planType.workoutLabels.first ?? ""
+            let currentMax = exercises.filter { ($0.label ?? label) == label }.map { $0.orderIndex ?? 0 }.max() ?? -1
+            newExercise.orderIndex = currentMax + 1
+            exercises.append(newExercise)
+        }
+    }
+
+    private var reorderSheet: some View {
+        PlanExercisesReorderSheet(
+            planType: planType,
+            labels: planType.workoutLabels,
+            exercises: exercises,
+            onSave: { newOrder in
+                var counters: [String: Int] = [:]
+                var stamped = newOrder
+                for idx in stamped.indices {
+                    let label = stamped[idx].label ?? planType.workoutLabels.first ?? ""
+                    let next = (counters[label] ?? 0)
+                    stamped[idx].orderIndex = next
+                    counters[label] = next + 1
+                }
+                exercises = stamped
+            }
+        )
+    }
+
+    private func exerciseEditSheet(_ exercise: Exercise) -> some View {
+        ExerciseEditSheet(
+            exercise: exercise,
+            onSave: { updatedExercise in
+                if let index = exercises.firstIndex(where: { $0.id == exercise.id }) {
+                    exercises[index] = updatedExercise
+                }
+                editingExercise = nil
+            },
+            onCancel: { editingExercise = nil }
+        )
+    }
+
+    private func deleteSelectedExercise() {
+        if let exercise = exerciseToDelete,
+           let index = exercises.firstIndex(where: { $0.id == exercise.id }) {
+            exercises.remove(at: index)
+        }
+        exerciseToDelete = nil
     }
 
     private var headerSection: some View {
