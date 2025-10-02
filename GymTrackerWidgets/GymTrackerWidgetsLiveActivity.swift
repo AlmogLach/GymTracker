@@ -78,177 +78,124 @@ struct RestLiveActivity: Widget {
                 
                 // Consider rest state active if current time is before endsAt AND state indicates rest
                 if context.state.isRest && Date() < context.state.endsAt {
-                    // Enhanced Rest Timer - Modern Apple style
-                    VStack(spacing: 18) {
-                        // Rest header with breathing animation
-                        VStack(spacing: 8) {
-                            HStack(spacing: 8) {
-                                ZStack {
-                                    Circle()
-                                        .fill(LinearGradient(
-                                            colors: [Color.orange, Color.orange.opacity(0.7)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ))
-                                        .frame(width: 32, height: 32)
-                                        .scaleEffect(1.0)
-                                        .animation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true), value: UUID())
-                                    
-                                    Image(systemName: "pause.circle.fill")
-                                        .font(.system(size: 16, weight: .medium))
-                                        .foregroundColor(.white)
-                                }
-                                
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("מנוחה פעילה")
-                                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                                        .foregroundColor(.white)
-                                    
-                                    Text("התכונן לתרגיל הבא")
-                                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                                        .foregroundColor(.white.opacity(0.8))
-                                }
-                                
-                                Spacer()
-                            }
+                    // Ultra-compact rest timer design
+                    VStack(spacing: 12) {
+                        // Compact header
+                        HStack(spacing: 8) {
+                            Image(systemName: "pause.circle.fill")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundColor(.orange)
+                            
+                            Text("מנוחה")
+                                .font(.system(size: 14, weight: .bold, design: .rounded))
+                                .foregroundColor(.white)
+                            
+                            Spacer()
                             
                             // Next exercise preview
-                            HStack(spacing: 6) {
+                            HStack(spacing: 4) {
                                 Image(systemName: "arrow.right.circle.fill")
-                                    .font(.system(size: 12, weight: .medium))
+                                    .font(.system(size: 10, weight: .medium))
                                     .foregroundColor(.green)
                                 
                                 Text("הבא: \(context.state.exerciseName ?? "תרגיל הבא")")
-                                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                                    .foregroundColor(.white.opacity(0.9))
-                                
-                                Spacer()
+                                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                                    .foregroundColor(.white.opacity(0.8))
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .background(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .fill(Color.white.opacity(0.1))
-                            )
                         }
                         
-                        // Compact timer design - much smaller
-                        HStack(spacing: 16) {
-                            // Timer text on the left
-                            VStack(alignment: .leading, spacing: 4) {
+                        // Compact timer with small ring
+                        HStack(spacing: 12) {
+                            // Timer text
+                            VStack(alignment: .leading, spacing: 2) {
                                 TimelineView(.periodic(from: .now, by: 1)) { timeline in
                                     Text(timerInterval: timeline.date...context.state.endsAt)
-                                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                                        .font(.system(size: 20, weight: .bold, design: .rounded))
                                         .monospacedDigit()
                                         .foregroundColor(.white)
-                                        .shadow(color: .black.opacity(0.3), radius: 1, y: 1)
                                 }
                                 
                                 Text("דקות מנוחה")
-                                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                                    .foregroundColor(.white.opacity(0.8))
+                                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                                    .foregroundColor(.white.opacity(0.7))
                             }
                             
-                            // Small progress ring on the right
+                            // Very small progress ring
                             TimelineView(.periodic(from: .now, by: 1)) { timeline in
                                 ZStack {
-                                    // Background ring
                                     Circle()
-                                        .stroke(Color.white.opacity(0.2), lineWidth: 4)
-                                        .frame(width: 50, height: 50)
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 3)
+                                        .frame(width: 40, height: 40)
 
-                                    // Progress ring
                                     let total = max(1.0, context.state.endsAt.timeIntervalSince(context.state.startedAt))
                                     let remaining = max(0.0, context.state.endsAt.timeIntervalSince(timeline.date))
                                     let progress = max(0.0, min(1.0, remaining / total))
 
                                     Circle()
                                         .trim(from: 0, to: progress)
-                                        .stroke(
-                                            LinearGradient(
-                                                colors: [Color.orange, Color.yellow],
-                                                startPoint: .topLeading,
-                                                endPoint: .bottomTrailing
-                                            ),
-                                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                                        )
-                                        .frame(width: 50, height: 50)
+                                        .stroke(Color.orange, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                                        .frame(width: 40, height: 40)
                                         .rotationEffect(.degrees(-90))
                                 }
                             }
+                            
+                            Spacer()
                         }
                         
-                        // Enhanced control buttons with better hierarchy
-                        VStack(spacing: 12) {
-                            // Primary action - Skip rest (most common)
+                        // Compact control buttons - single row
+                        HStack(spacing: 8) {
                             Link(destination: URL(string: "gymtracker://rest/skip")!) {
-                                HStack(spacing: 10) {
+                                HStack(spacing: 6) {
                                     Image(systemName: "forward.fill")
-                                        .font(.system(size: 18, weight: .medium))
-                                        .foregroundColor(.white)
-                                    
-                                    Text("דלג מנוחה")
-                                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                                        .foregroundColor(.white)
-                                    
-                                    Spacer()
-                                    
-                                    Image(systemName: "arrow.right")
                                         .font(.system(size: 14, weight: .medium))
-                                        .foregroundColor(.white.opacity(0.8))
+                                        .foregroundColor(.white)
+                                    
+                                    Text("דלג")
+                                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                        .foregroundColor(.white)
                                 }
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 50)
+                                .frame(height: 36)
                                 .background(
-                                    RoundedRectangle(cornerRadius: 16)
-                                        .fill(
-                                            LinearGradient(
-                                                colors: [Color.blue, Color.blue.opacity(0.8)],
-                                                startPoint: .leading,
-                                                endPoint: .trailing
-                                            )
-                                        )
-                                        .shadow(color: .blue.opacity(0.4), radius: 8, y: 4)
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.blue)
                                 )
                             }
                             
-                            // Secondary actions row
-                            HStack(spacing: 12) {
-                                Link(destination: URL(string: "gymtracker://rest/stop")!) {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "stop.fill")
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(.white)
-                                        Text("עצור")
-                                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                            .foregroundColor(.white)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.red)
-                                            .shadow(color: .red.opacity(0.3), radius: 4, y: 2)
-                                    )
+                            Link(destination: URL(string: "gymtracker://rest/stop")!) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "stop.fill")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.white)
+                                    
+                                    Text("עצור")
+                                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                        .foregroundColor(.white)
                                 }
-                                
-                                Link(destination: URL(string: "gymtracker://rest/addminute")!) {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "plus.circle.fill")
-                                            .font(.system(size: 16, weight: .medium))
-                                            .foregroundColor(.white)
-                                        Text("+1 דק׳")
-                                            .font(.system(size: 12, weight: .semibold, design: .rounded))
-                                            .foregroundColor(.white)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .frame(height: 44)
-                                    .background(
-                                        RoundedRectangle(cornerRadius: 12)
-                                            .fill(Color.green)
-                                            .shadow(color: .green.opacity(0.3), radius: 4, y: 2)
-                                    )
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 36)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.red)
+                                )
+                            }
+                            
+                            Link(destination: URL(string: "gymtracker://rest/addminute")!) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(.white)
+                                    
+                                    Text("+1")
+                                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                                        .foregroundColor(.white)
                                 }
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 36)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color.green)
+                                )
                             }
                         }
                     }
