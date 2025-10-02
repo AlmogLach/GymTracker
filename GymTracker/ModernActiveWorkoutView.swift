@@ -924,15 +924,17 @@ struct ModernActiveWorkoutView: View {
         
         guard let exercise = currentExercise else { 
             print("🔍 initializeCurrentExerciseValues: No current exercise (workout: \(workout.label), index: \(currentExerciseIndex), exercises: \(workout.exercises.count))")
-        print("🔍 Plan: \(workout.plan.name), PlanType: \(workout.plan.planType)")
-        print("🔍 All plan exercises: \(workout.plan.exercises.map { "\($0.name) (label: \($0.label ?? "nil"))" })")
-        print("🔍 Current exercise index: \(currentExerciseIndex)")
-        print("🔍 Workout exercises: \(workout.exercises.map { "\($0.name) (label: \($0.label ?? "nil"))" })")
+            print("🔍 Plan: \(workout.plan.name), PlanType: \(workout.plan.planType)")
+            print("🔍 All plan exercises: \(workout.plan.exercises.map { "\($0.name) (label: \($0.label ?? "nil"))" })")
+            print("🔍 Current exercise index: \(currentExerciseIndex)")
+            print("🔍 Workout exercises: \(workout.exercises.map { "\($0.name) (label: \($0.label ?? "nil"))" })")
             return 
         }
         
         print("🔍 initializeCurrentExerciseValues: Starting for '\(exercise.name)'")
         print("🔍 Exercise details: name='\(exercise.name)', label='\(exercise.label ?? "nil")', plannedSets=\(exercise.plannedSets), plannedReps=\(exercise.plannedReps ?? 0)")
+        print("🔍 currentExerciseIndex: \(currentExerciseIndex), workout.exercises.count: \(workout.exercises.count)")
+        print("🔍 All workout exercises: \(workout.exercises.enumerated().map { "\($0.offset): \($0.element.name)" })")
         
         // 1) Prefer values from the current session
         if let current = currentSession,
@@ -976,6 +978,7 @@ struct ModernActiveWorkoutView: View {
         }
         
         print("🔍 latestLoggedSetForCurrentExercise: Looking for exercise '\(name)'")
+        print("🔍 currentExerciseIndex: \(currentExerciseIndex), workout?.exercises.count: \(workout?.exercises.count ?? 0)")
         print("🔍 Available sessions: \(sessions.count)")
         
         // Try current @Query first
