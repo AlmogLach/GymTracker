@@ -132,43 +132,48 @@ struct RestLiveActivity: Widget {
                             )
                         }
                         
-                        // Enhanced timer with modern design - properly sized
-                        TimelineView(.periodic(from: .now, by: 1)) { timeline in
-                            ZStack {
-                                // Background ring
-                                Circle()
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 6)
-                                    .frame(width: 80, height: 80)
-
-                                // Progress ring with gradient
-                                let total = max(1.0, context.state.endsAt.timeIntervalSince(context.state.startedAt))
-                                let remaining = max(0.0, context.state.endsAt.timeIntervalSince(timeline.date))
-                                let progress = max(0.0, min(1.0, remaining / total))
-
-                                Circle()
-                                    .trim(from: 0, to: progress)
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [Color.orange, Color.yellow, Color.orange.opacity(0.8)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
-                                    )
-                                    .frame(width: 80, height: 80)
-                                    .rotationEffect(.degrees(-90))
-
-                                // Timer content
-                                VStack(spacing: 2) {
+                        // Compact timer design - much smaller
+                        HStack(spacing: 16) {
+                            // Timer text on the left
+                            VStack(alignment: .leading, spacing: 4) {
+                                TimelineView(.periodic(from: .now, by: 1)) { timeline in
                                     Text(timerInterval: timeline.date...context.state.endsAt)
-                                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                                        .font(.system(size: 24, weight: .bold, design: .rounded))
                                         .monospacedDigit()
                                         .foregroundColor(.white)
                                         .shadow(color: .black.opacity(0.3), radius: 1, y: 1)
+                                }
+                                
+                                Text("דקות מנוחה")
+                                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                                    .foregroundColor(.white.opacity(0.8))
+                            }
+                            
+                            // Small progress ring on the right
+                            TimelineView(.periodic(from: .now, by: 1)) { timeline in
+                                ZStack {
+                                    // Background ring
+                                    Circle()
+                                        .stroke(Color.white.opacity(0.2), lineWidth: 4)
+                                        .frame(width: 50, height: 50)
 
-                                    Text("דקות מנוחה")
-                                        .font(.system(size: 9, weight: .medium, design: .rounded))
-                                        .foregroundColor(.white.opacity(0.8))
+                                    // Progress ring
+                                    let total = max(1.0, context.state.endsAt.timeIntervalSince(context.state.startedAt))
+                                    let remaining = max(0.0, context.state.endsAt.timeIntervalSince(timeline.date))
+                                    let progress = max(0.0, min(1.0, remaining / total))
+
+                                    Circle()
+                                        .trim(from: 0, to: progress)
+                                        .stroke(
+                                            LinearGradient(
+                                                colors: [Color.orange, Color.yellow],
+                                                startPoint: .topLeading,
+                                                endPoint: .bottomTrailing
+                                            ),
+                                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                                        )
+                                        .frame(width: 50, height: 50)
+                                        .rotationEffect(.degrees(-90))
                                 }
                             }
                         }
