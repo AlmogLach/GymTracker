@@ -772,6 +772,9 @@ struct ModernActiveWorkoutView: View {
             )
         }
 
+        // Update current values for next set (keep the same weight/reps for convenience)
+        // Don't reset to 0 - user likely wants to continue with same values
+        
         // Start rest: 60s for warmup, default for working set
         let duration = isWarmupSet ? 60 : settings.defaultRestSeconds
         startRestTimer(seconds: duration)
@@ -898,16 +901,26 @@ struct ModernActiveWorkoutView: View {
     }
     
     private func initializeCurrentExerciseValues() {
-        guard let exercise = currentExercise else { return }
+        guard let exercise = currentExercise else { 
+            print("🔍 initializeCurrentExerciseValues: No current exercise")
+            return 
+        }
+        
+        print("🔍 initializeCurrentExerciseValues: Starting for \(exercise.name)")
+        
         // 1) Prefer values from the current session
         if let current = currentSession,
            let currentExerciseSession = current.exerciseSessions.first(where: { $0.exerciseName == exercise.name }) {
+            print("🔍 Found current exercise session with \(currentExerciseSession.setLogs.count) sets")
+            
             if let lastWorking = currentExerciseSession.setLogs.last(where: { !($0.isWarmup ?? false) }) {
+                print("🔍 Using last working set: \(lastWorking.weight)kg x \(lastWorking.reps)")
                 currentWeight = lastWorking.weight
                 currentReps = lastWorking.reps
                 return
             }
             if let lastAny = currentExerciseSession.setLogs.last {
+                print("🔍 Using last any set: \(lastAny.weight)kg x \(lastAny.reps)")
                 currentWeight = lastAny.weight
                 currentReps = lastAny.reps
                 return
@@ -916,12 +929,14 @@ struct ModernActiveWorkoutView: View {
 
         // 2) Otherwise use the latest from history (prefer working set)
         if let last = latestLoggedSetForCurrentExercise() {
+            print("🔍 Using latest from history: \(last.weight)kg x \(last.reps)")
             currentWeight = last.weight
             currentReps = last.reps
             return
         }
 
         // 3) Fallback to planned reps
+        print("🔍 Using fallback: 0kg x \(exercise.plannedReps ?? 8)")
         currentWeight = 0.0
         currentReps = exercise.plannedReps ?? 8
     }
