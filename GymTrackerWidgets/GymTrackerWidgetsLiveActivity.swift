@@ -128,8 +128,8 @@ struct RestLiveActivity: Widget {
                                         .frame(width: 40, height: 40)
 
                                     let total = max(1.0, context.state.endsAt.timeIntervalSince(context.state.startedAt))
-                                    let remaining = max(0.0, context.state.endsAt.timeIntervalSince(timeline.date))
-                                    let progress = max(0.0, min(1.0, remaining / total))
+                                    let elapsed = max(0.0, timeline.date.timeIntervalSince(context.state.startedAt))
+                                    let progress = max(0.0, min(1.0, elapsed / total))
 
                                     Circle()
                                         .trim(from: 0, to: progress)
