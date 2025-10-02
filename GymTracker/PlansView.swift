@@ -183,12 +183,20 @@ struct PlansView: View {
             schedule: plan.schedule
         )
         modelContext.insert(newPlan)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save duplicated plan: \(error)")
+        }
     }
 
     private func deletePlan(_ plan: WorkoutPlan) {
         modelContext.delete(plan)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to delete plan: \(error)")
+        }
     }
 }
 
@@ -559,7 +567,7 @@ struct EditPlanSheet: View {
             exercises: exercises,
             onSave: { newOrder in
                 var counters: [String: Int] = [:]
-                var stamped = newOrder
+                let stamped = newOrder
                 for idx in stamped.indices {
                     let label = stamped[idx].label ?? planType.workoutLabels.first ?? ""
                     let next = (counters[label] ?? 0)
@@ -1507,7 +1515,11 @@ struct EditPlanSheet: View {
         plan.exercises = exercises
         plan.schedule = schedule
 
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save plan changes: \(error)")
+        }
         dismiss()
     }
 

@@ -122,7 +122,7 @@ final class LiveActivityManager {
                 }
             }
             // Small delay to allow cleanup
-            Thread.sleep(forTimeInterval: 0.3)
+            try? await Task.sleep(nanoseconds: 300_000_000) // 0.3 seconds
         }
 
         let start = Date()
@@ -410,9 +410,9 @@ final class LiveActivityManager {
     // Update existing workout Live Activity with new exercise info
     func updateWorkoutInfo(exerciseName: String?, setsCompleted: Int? = nil, setsPlanned: Int? = nil, elapsed: Int? = nil) async {
         guard let activity = activity else { return }
-        // Throttle to every ~20s
+        // Throttle to every ~10s for better responsiveness
         let now = Date()
-        if let last = lastWorkoutUpdateAt, now.timeIntervalSince(last) < 15 {
+        if let last = lastWorkoutUpdateAt, now.timeIntervalSince(last) < 10 {
             return
         }
         lastWorkoutUpdateAt = now

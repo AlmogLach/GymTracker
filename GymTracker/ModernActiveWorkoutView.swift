@@ -215,6 +215,8 @@ struct ModernActiveWorkoutView: View {
                             .stroke(Color.white.opacity(0.2), lineWidth: 1)
                     )
             )
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("אימון פעיל - \(workout?.label ?? "אימון")")
         }
     }
     
@@ -405,17 +407,20 @@ struct ModernActiveWorkoutView: View {
                                 .font(.system(size: 24))
                                 .foregroundColor(.red.opacity(0.8))
                         }
+                        .accessibilityLabel("הפחת חזרות")
                         
                         Text("\(currentReps)")
                             .font(.system(size: 20, weight: .bold, design: .rounded))
                             .foregroundColor(.white)
                             .frame(minWidth: 100)
+                            .accessibilityLabel("חזרות: \(currentReps)")
                         
                         Button(action: { adjustReps(1) }) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 24))
                                 .foregroundColor(.green.opacity(0.8))
                         }
+                        .accessibilityLabel("הוסף חזרות")
                     }
                 }
 
@@ -470,6 +475,7 @@ struct ModernActiveWorkoutView: View {
                     .background(AppTheme.accent.opacity(0.2))
                     .clipShape(Capsule())
                 }
+                .accessibilityLabel("תרגיל הבא")
             }
             
             LazyVStack(spacing: 8) {
@@ -612,6 +618,7 @@ struct ModernActiveWorkoutView: View {
                                     .foregroundColor(.white)
                             }
                         }
+                        .accessibilityLabel("עצור מנוחה")
                         .buttonStyle(.plain)
                         
                         // Skip button
@@ -633,6 +640,7 @@ struct ModernActiveWorkoutView: View {
                                     .foregroundColor(.white)
                             }
                         }
+                        .accessibilityLabel("דלג מנוחה ותרגיל הבא")
                         .buttonStyle(.plain)
                     }
                     
@@ -657,6 +665,7 @@ struct ModernActiveWorkoutView: View {
                                 .shadow(color: .blue.opacity(0.3), radius: 4, x: 0, y: 2)
                         )
                     }
+                    .accessibilityLabel("הוסף דקה למנוחה")
                     .buttonStyle(.plain)
                 }
             }
@@ -748,7 +757,11 @@ struct ModernActiveWorkoutView: View {
             }
         }
 
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save workout session: \(error)")
+        }
         // Update Live Activity sets info
         Task { @MainActor in
             await LiveActivityManager.shared.updateWorkoutInfo(
@@ -788,7 +801,8 @@ struct ModernActiveWorkoutView: View {
         showRestTimer = true
         restEndsAt = Date().addingTimeInterval(TimeInterval(restSecondsRemaining))
         
-        // Start local timer
+        // Start local timer (invalidate any existing timer first)
+        restTimer?.invalidate()
         restTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             if self.restSecondsRemaining > 0 {
                 self.restSecondsRemaining -= 1
@@ -829,7 +843,16 @@ struct ModernActiveWorkoutView: View {
         // Cancel pending rest-end alert
         NotificationManager.shared.cancelRestEndNotification()
 
-        // Don't end Live Activity - it's already updated to workout mode
+        // Update Live Activity to workout mode
+        Task { @MainActor in
+            await LiveActivityManager.shared.updateWorkoutInfo(
+                exerciseName: currentExercise?.name,
+                setsCompleted: getCurrentSetsCompleted(),
+                setsPlanned: currentExercise?.plannedSets,
+                elapsed: elapsedSeconds
+            )
+        }
+        
         print("✅ Rest timer stopped successfully")
     }
     
@@ -838,7 +861,11 @@ struct ModernActiveWorkoutView: View {
         LiveActivityManager.shared.finishWorkout()
         currentSession?.isCompleted = true
         currentSession?.durationSeconds = elapsedSeconds
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save completed workout: \(error)")
+        }
         onComplete()
         dismiss()
     }
@@ -853,7 +880,11 @@ struct ModernActiveWorkoutView: View {
         // If nothing was logged, do not keep an empty workout session
         if getTotalSetsCompleted() == 0, let session = currentSession {
             modelContext.delete(session)
-            try? modelContext.save()
+            do {
+                try modelContext.save()
+            } catch {
+                print("❌ Failed to delete empty workout session: \(error)")
+            }
         }
         dismiss()
     }
@@ -949,7 +980,8 @@ struct ModernActiveWorkoutView: View {
                     restSecondsRemaining = remaining
                     LiveActivityManager.shared.updateRemaining(remaining)
                     
-                    // Restart the local timer
+                    // Restart the local timer (invalidate any existing timer first)
+                    restTimer?.invalidate()
                     restTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
                         if self.restSecondsRemaining > 0 {
                             self.restSecondsRemaining -= 1
@@ -1052,10 +1084,16 @@ struct ModernActiveWorkoutView: View {
         
         workoutStartTime = Date()
         startWorkoutTimer()
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save new workout session: \(error)")
+        }
     }
     
     private func startWorkoutTimer() {
+        // Invalidate any existing timer first
+        workoutTimer?.invalidate()
         workoutTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
             elapsedSeconds += 1
         }

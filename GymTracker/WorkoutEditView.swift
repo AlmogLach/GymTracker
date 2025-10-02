@@ -980,7 +980,11 @@ struct NewWorkoutSheet: View {
             exerciseSessions: exerciseSessions
         )
         modelContext.insert(session)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save workout session: \(error)")
+        }
 
         createdSession = session
     }
@@ -1654,13 +1658,21 @@ struct WorkoutSessionEditSheet: View {
         session.isCompleted = isCompleted
         session.durationSeconds = (durationMinutes * 60) + durationSeconds
         
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to save session changes: \(error)")
+        }
         dismiss()
     }
     
     private func deleteSession() {
         modelContext.delete(session)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            print("❌ Failed to delete session: \(error)")
+        }
         dismiss()
     }
 }
