@@ -949,21 +949,45 @@ struct ModernActiveWorkoutView: View {
     }
 
     private func latestLoggedSetForCurrentExercise() -> SetLog? {
-        guard let name = currentExercise?.name else { return nil }
+        guard let name = currentExercise?.name else { 
+            print("🔍 latestLoggedSetForCurrentExercise: No current exercise name")
+            return nil 
+        }
+        
+        print("🔍 latestLoggedSetForCurrentExercise: Looking for exercise '\(name)'")
+        print("🔍 Available sessions: \(sessions.count)")
+        
         // Try current @Query first
         if let lastSession = sessions.first(where: { session in
             session.exerciseSessions.contains { $0.exerciseName == name }
         }), let lastExerciseSession = lastSession.exerciseSessions.first(where: { $0.exerciseName == name }) {
-            return lastExerciseSession.setLogs.last(where: { !($0.isWarmup ?? false) }) ?? lastExerciseSession.setLogs.last
+            print("🔍 Found session with exercise: \(lastSession.date), sets: \(lastExerciseSession.setLogs.count)")
+            let workingSet = lastExerciseSession.setLogs.last(where: { !($0.isWarmup ?? false) })
+            let anySet = lastExerciseSession.setLogs.last
+            print("🔍 Last working set: \(workingSet?.weight ?? 0)kg x \(workingSet?.reps ?? 0)")
+            print("🔍 Last any set: \(anySet?.weight ?? 0)kg x \(anySet?.reps ?? 0)")
+            return workingSet ?? anySet
         }
+        
+        print("🔍 No session found in @Query, trying direct fetch...")
         // Fallback to direct fetch to avoid race on first load
         do {
             let fetched = try modelContext.fetch(FetchDescriptor<WorkoutSession>(sortBy: [SortDescriptor(\.date, order: .reverse)]))
+            print("🔍 Direct fetch found \(fetched.count) sessions")
             if let s = fetched.first(where: { $0.exerciseSessions.contains { $0.exerciseName == name } }),
                let ex = s.exerciseSessions.first(where: { $0.exerciseName == name }) {
-                return ex.setLogs.last(where: { !($0.isWarmup ?? false) }) ?? ex.setLogs.last
+                print("🔍 Found in direct fetch: \(s.date), sets: \(ex.setLogs.count)")
+                let workingSet = ex.setLogs.last(where: { !($0.isWarmup ?? false) })
+                let anySet = ex.setLogs.last
+                print("🔍 Last working set: \(workingSet?.weight ?? 0)kg x \(workingSet?.reps ?? 0)")
+                print("🔍 Last any set: \(anySet?.weight ?? 0)kg x \(anySet?.reps ?? 0)")
+                return workingSet ?? anySet
             }
-        } catch { }
+        } catch { 
+            print("🔍 Direct fetch error: \(error)")
+        }
+        
+        print("🔍 No logged sets found for exercise '\(name)'")
         return nil
     }
     
