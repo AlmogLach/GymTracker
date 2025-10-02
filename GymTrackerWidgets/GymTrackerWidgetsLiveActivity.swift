@@ -132,26 +132,13 @@ struct RestLiveActivity: Widget {
                             )
                         }
                         
-                        // Enhanced timer with modern design
+                        // Enhanced timer with modern design - properly sized
                         TimelineView(.periodic(from: .now, by: 1)) { timeline in
                             ZStack {
-                                // Outer glow ring
-                                Circle()
-                                    .stroke(
-                                        LinearGradient(
-                                            colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.1)],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        ),
-                                        lineWidth: 8
-                                    )
-                                    .frame(width: 120, height: 120)
-                                    .blur(radius: 2)
-                                
                                 // Background ring
                                 Circle()
-                                    .stroke(Color.white.opacity(0.15), lineWidth: 8)
-                                    .frame(width: 100, height: 100)
+                                    .stroke(Color.white.opacity(0.15), lineWidth: 6)
+                                    .frame(width: 80, height: 80)
 
                                 // Progress ring with gradient
                                 let total = max(1.0, context.state.endsAt.timeIntervalSince(context.state.startedAt))
@@ -166,22 +153,21 @@ struct RestLiveActivity: Widget {
                                             startPoint: .topLeading,
                                             endPoint: .bottomTrailing
                                         ),
-                                        style: StrokeStyle(lineWidth: 8, lineCap: .round)
+                                        style: StrokeStyle(lineWidth: 6, lineCap: .round)
                                     )
-                                    .frame(width: 100, height: 100)
+                                    .frame(width: 80, height: 80)
                                     .rotationEffect(.degrees(-90))
-                                    .animation(.easeInOut(duration: 0.5), value: progress)
 
                                 // Timer content
-                                VStack(spacing: 4) {
+                                VStack(spacing: 2) {
                                     Text(timerInterval: timeline.date...context.state.endsAt)
-                                        .font(.system(size: 24, weight: .bold, design: .rounded))
+                                        .font(.system(size: 18, weight: .bold, design: .rounded))
                                         .monospacedDigit()
                                         .foregroundColor(.white)
-                                        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                                        .shadow(color: .black.opacity(0.3), radius: 1, y: 1)
 
                                     Text("דקות מנוחה")
-                                        .font(.system(size: 11, weight: .medium, design: .rounded))
+                                        .font(.system(size: 9, weight: .medium, design: .rounded))
                                         .foregroundColor(.white.opacity(0.8))
                                 }
                             }
