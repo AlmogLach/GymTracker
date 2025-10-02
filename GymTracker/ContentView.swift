@@ -41,11 +41,17 @@ struct ContentView: View {
                 }
                 .tag(3)
 
-            SettingsView()
+            ExportView()
                 .tabItem {
-                    Label("הגדרות", systemImage: selectedTab == 4 ? "gearshape.fill" : "gearshape")
+                    Label("ייצוא", systemImage: selectedTab == 4 ? "tablecells.fill" : "tablecells")
                 }
                 .tag(4)
+
+            SettingsView()
+                .tabItem {
+                    Label("הגדרות", systemImage: selectedTab == 5 ? "gearshape.fill" : "gearshape")
+                }
+                .tag(5)
         }
         .accentColor(AppTheme.accent)
         .onAppear {
