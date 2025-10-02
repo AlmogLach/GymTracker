@@ -901,8 +901,13 @@ struct ModernActiveWorkoutView: View {
     }
     
     private func initializeCurrentExerciseValues() {
+        guard let workout = workout else {
+            print("🔍 initializeCurrentExerciseValues: No workout provided")
+            return
+        }
+        
         guard let exercise = currentExercise else { 
-            print("🔍 initializeCurrentExerciseValues: No current exercise")
+            print("🔍 initializeCurrentExerciseValues: No current exercise (workout: \(workout.label), index: \(currentExerciseIndex), exercises: \(workout.exercises.count))")
             return 
         }
         
