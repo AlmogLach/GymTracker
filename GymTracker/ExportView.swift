@@ -181,17 +181,22 @@ struct PreviewSheet: View {
     
     var body: some View {
         NavigationView {
-            WebView(html: html)
-                .navigationTitle("תצוגה מקדימה")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("סגור") {
-                            dismiss()
-                        }
+            VStack(spacing: 0) {
+                WebView(html: html)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .clipped()
+            }
+            .navigationTitle("תצוגה מקדימה")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("סגור") {
+                        dismiss()
                     }
                 }
+            }
         }
+        .navigationViewStyle(StackNavigationViewStyle())
     }
 }
 
@@ -199,7 +204,16 @@ struct WebView: UIViewRepresentable {
     let html: String
     
     func makeUIView(context: Context) -> WKWebView {
-        let webView = WKWebView()
+        let configuration = WKWebViewConfiguration()
+        configuration.allowsInlineMediaPlayback = true
+        configuration.mediaTypesRequiringUserActionForPlayback = []
+        
+        let webView = WKWebView(frame: .zero, configuration: configuration)
+        webView.translatesAutoresizingMaskIntoConstraints = false
+        webView.isOpaque = false
+        webView.backgroundColor = UIColor.clear
+        webView.scrollView.backgroundColor = UIColor.clear
+        
         return webView
     }
     
