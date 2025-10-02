@@ -908,6 +908,8 @@ struct ModernActiveWorkoutView: View {
         
         guard let exercise = currentExercise else { 
             print("🔍 initializeCurrentExerciseValues: No current exercise (workout: \(workout.label), index: \(currentExerciseIndex), exercises: \(workout.exercises.count))")
+            print("🔍 Plan: \(workout.plan.name), PlanType: \(workout.plan.planType)")
+            print("🔍 All plan exercises: \(workout.plan.exercises.map { "\($0.name) (label: \($0.label ?? "nil"))" })")
             return 
         }
         
