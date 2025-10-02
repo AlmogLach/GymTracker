@@ -418,7 +418,7 @@ struct DashboardView: View {
         for plan in plans.sorted(by: { $0.name < $1.name }) {
             if plan.schedule.contains(where: { $0.weekday == today }) {
                 let nextLabel = getNextWorkoutLabel(for: plan)
-                let exercises = plan.exercises
+                var exercises = plan.exercises
                     .filter { ($0.label ?? plan.planType.workoutLabels.first) == nextLabel }
                     .sorted { a, b in
                         let ai = a.orderIndex ?? 0
@@ -426,6 +426,17 @@ struct DashboardView: View {
                         if ai != bi { return ai < bi }
                         return a.name < b.name
                     }
+                
+                // If no exercises found for the next label, fall back to any available exercises
+                if exercises.isEmpty {
+                    print("⚠️ No exercises found for label '\(nextLabel)', falling back to all exercises")
+                    exercises = plan.exercises.sorted { a, b in
+                        let ai = a.orderIndex ?? 0
+                        let bi = b.orderIndex ?? 0
+                        if ai != bi { return ai < bi }
+                        return a.name < b.name
+                    }
+                }
                 
                 return NextWorkout(
                     plan: plan,
@@ -442,7 +453,7 @@ struct DashboardView: View {
             for plan in plans.sorted(by: { $0.name < $1.name }) {
                 if plan.schedule.contains(where: { $0.weekday == targetDay }) {
                     let nextLabel = getNextWorkoutLabel(for: plan)
-                    let exercises = plan.exercises
+                    var exercises = plan.exercises
                         .filter { ($0.label ?? plan.planType.workoutLabels.first) == nextLabel }
                         .sorted { a, b in
                             let ai = a.orderIndex ?? 0
@@ -450,6 +461,17 @@ struct DashboardView: View {
                             if ai != bi { return ai < bi }
                             return a.name < b.name
                         }
+                    
+                    // If no exercises found for the next label, fall back to any available exercises
+                    if exercises.isEmpty {
+                        print("⚠️ No exercises found for label '\(nextLabel)', falling back to all exercises")
+                        exercises = plan.exercises.sorted { a, b in
+                            let ai = a.orderIndex ?? 0
+                            let bi = b.orderIndex ?? 0
+                            if ai != bi { return ai < bi }
+                            return a.name < b.name
+                        }
+                    }
                     
                     return NextWorkout(
                         plan: plan,
