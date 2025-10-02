@@ -60,7 +60,7 @@ final class LiveActivityManager {
         }
     }
 
-    func startRest(durationSeconds: Int, exerciseName: String?, workoutLabel: String?, setsCompleted: Int? = nil, setsPlanned: Int? = nil) {
+    func startRest(durationSeconds: Int, exerciseName: String?, workoutLabel: String?, setsCompleted: Int? = nil, setsPlanned: Int? = nil) async {
         print("🔍 LiveActivity: Starting rest timer with \(durationSeconds) seconds")
         print("🔍 LiveActivity: Exercise: \(exerciseName ?? "nil")")
         print("🔍 LiveActivity: Workout: \(workoutLabel ?? "nil")")

@@ -821,13 +821,15 @@ struct ModernActiveWorkoutView: View {
         NotificationManager.shared.scheduleRestEndNotification(after: restSecondsRemaining, exerciseName: currentExercise?.name)
 
         // Start Live Activity
-        LiveActivityManager.shared.startRest(
-            durationSeconds: restSecondsRemaining, 
-            exerciseName: currentExercise?.name, 
-            workoutLabel: workout?.label,
-            setsCompleted: getCurrentSetsCompleted(),
-            setsPlanned: currentExercise?.plannedSets
-        )
+        Task {
+            await LiveActivityManager.shared.startRest(
+                durationSeconds: restSecondsRemaining, 
+                exerciseName: currentExercise?.name, 
+                workoutLabel: workout?.label,
+                setsCompleted: getCurrentSetsCompleted(),
+                setsPlanned: currentExercise?.plannedSets
+            )
+        }
         
         print("✅ Rest timer started successfully")
     }
