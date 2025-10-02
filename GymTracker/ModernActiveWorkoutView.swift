@@ -913,7 +913,8 @@ struct ModernActiveWorkoutView: View {
             return 
         }
         
-        print("🔍 initializeCurrentExerciseValues: Starting for \(exercise.name)")
+        print("🔍 initializeCurrentExerciseValues: Starting for '\(exercise.name)'")
+        print("🔍 Exercise details: name='\(exercise.name)', label='\(exercise.label ?? "nil")', plannedSets=\(exercise.plannedSets), plannedReps=\(exercise.plannedReps ?? 0)")
         
         // 1) Prefer values from the current session
         if let current = currentSession,
