@@ -940,8 +940,10 @@ struct ModernActiveWorkoutView: View {
         // 2) Otherwise use the latest from history (prefer working set)
         if let last = latestLoggedSetForCurrentExercise() {
             print("🔍 Using latest from history: \(last.weight)kg x \(last.reps)")
+            print("🔍 Setting currentWeight to \(last.weight) and currentReps to \(last.reps)")
             currentWeight = last.weight
             currentReps = last.reps
+            print("🔍 After setting: currentWeight=\(currentWeight), currentReps=\(currentReps)")
             return
         }
 
