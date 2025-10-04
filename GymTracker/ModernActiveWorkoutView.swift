@@ -1031,7 +1031,7 @@ struct ModernActiveWorkoutView: View {
     }
     
     private func initializeWarmupWeight() {
-        guard let exercise = currentExercise else { return }
+        guard currentExercise != nil else { return }
         
         // Try to get working weight from history
         if let lastWorking = latestLoggedSetForCurrentExercise() {
