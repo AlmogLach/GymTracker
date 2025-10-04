@@ -817,25 +817,26 @@ struct ModernActiveWorkoutView: View {
     }
     
     private func updateNextWarmupWeight() {
-        guard let exercise = currentExercise,
-              let session = currentSession,
-              let exerciseSession = session.exerciseSessions.first(where: { $0.exerciseName == exercise.name }) else { return }
+        guard let exercise = currentExercise else { return }
         
-        let warmupSets = exerciseSession.setLogs.filter { $0.isWarmup == true }
+        // Get all warmup sets for this exercise from all sessions
+        let allWarmupSets = getAllWarmupSetsForExercise(exercise.name)
         
-        if warmupSets.isEmpty {
+        if allWarmupSets.isEmpty {
             // First warmup set - start with 50% of working weight
-            if let workingSet = exerciseSession.setLogs.last(where: { $0.isWarmup == false }) {
+            if let workingSet = getLastWorkingSetForExercise(exercise.name) {
                 currentWeight = workingSet.weight * 0.5
                 currentReps = 8 // Default warmup reps
+                print("🔥 First warmup set: \(currentWeight)kg x \(currentReps) (50% of \(workingSet.weight)kg)")
             } else {
                 // No working sets yet, use a light weight
                 currentWeight = 20.0
                 currentReps = 8
+                print("🔥 First warmup set: \(currentWeight)kg x \(currentReps) (no working weight history)")
             }
         } else {
             // Progressive warmup: increase by 20-25% each warmup set
-            let lastWarmup = warmupSets.last!
+            let lastWarmup = allWarmupSets.last!
             let increment = max(2.5, lastWarmup.weight * 0.2) // At least 2.5kg increment
             currentWeight = lastWarmup.weight + increment
             
@@ -845,9 +846,49 @@ struct ModernActiveWorkoutView: View {
             } else {
                 currentReps = max(5, lastWarmup.reps - 1)
             }
+            print("🔥 Next warmup set: \(currentWeight)kg x \(currentReps) (progression from \(lastWarmup.weight)kg)")
+        }
+    }
+    
+    private func getAllWarmupSetsForExercise(_ exerciseName: String) -> [SetLog] {
+        var allWarmupSets: [SetLog] = []
+        
+        // Check current session first
+        if let session = currentSession,
+           let exerciseSession = session.exerciseSessions.first(where: { $0.exerciseName == exerciseName }) {
+            allWarmupSets.append(contentsOf: exerciseSession.setLogs.filter { $0.isWarmup == true })
         }
         
-        print("🔥 Next warmup set: \(currentWeight)kg x \(currentReps)")
+        // Check all other sessions
+        for session in sessions {
+            if let exerciseSession = session.exerciseSessions.first(where: { $0.exerciseName == exerciseName }) {
+                allWarmupSets.append(contentsOf: exerciseSession.setLogs.filter { $0.isWarmup == true })
+            }
+        }
+        
+        // Sort by date (most recent first)
+        return allWarmupSets.sorted { $0.weight < $1.weight } // Sort by weight for progression
+    }
+    
+    private func getLastWorkingSetForExercise(_ exerciseName: String) -> SetLog? {
+        // Check current session first
+        if let session = currentSession,
+           let exerciseSession = session.exerciseSessions.first(where: { $0.exerciseName == exerciseName }) {
+            if let workingSet = exerciseSession.setLogs.last(where: { $0.isWarmup == false }) {
+                return workingSet
+            }
+        }
+        
+        // Check all other sessions
+        for session in sessions {
+            if let exerciseSession = session.exerciseSessions.first(where: { $0.exerciseName == exerciseName }) {
+                if let workingSet = exerciseSession.setLogs.last(where: { $0.isWarmup == false }) {
+                    return workingSet
+                }
+            }
+        }
+        
+        return nil
     }
     
     private func nextExercise() {
@@ -1031,10 +1072,10 @@ struct ModernActiveWorkoutView: View {
     }
     
     private func initializeWarmupWeight() {
-        guard currentExercise != nil else { return }
+        guard let exercise = currentExercise else { return }
         
         // Try to get working weight from history
-        if let lastWorking = latestLoggedSetForCurrentExercise() {
+        if let lastWorking = getLastWorkingSetForExercise(exercise.name) {
             if lastWorking.isWarmup == false {
                 // Use 50% of working weight for first warmup
                 currentWeight = lastWorking.weight * 0.5
