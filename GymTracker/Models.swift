@@ -139,6 +139,27 @@ final class SetLog {
 }
 
 @Model
+final class PersonalRecord {
+    var exerciseName: String
+    var weight: Double
+    var reps: Int
+    var date: Date
+    var sessionId: UUID?
+    var isWarmup: Bool
+    var notes: String?
+    
+    init(exerciseName: String, weight: Double, reps: Int, date: Date, sessionId: UUID? = nil, isWarmup: Bool = false, notes: String? = nil) {
+        self.exerciseName = exerciseName
+        self.weight = weight
+        self.reps = reps
+        self.date = date
+        self.sessionId = sessionId
+        self.isWarmup = isWarmup
+        self.notes = notes
+    }
+}
+
+@Model
 final class AppSettings {
     enum WeightUnit: String, Codable, CaseIterable {
         case kg

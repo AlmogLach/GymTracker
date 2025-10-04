@@ -18,6 +18,7 @@ struct GymTrackerApp: App {
             WorkoutSession.self,
             ExerciseSession.self,
             SetLog.self,
+            PersonalRecord.self,
             AppSettings.self,
         ])
         

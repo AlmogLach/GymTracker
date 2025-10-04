@@ -35,6 +35,8 @@ struct ModernActiveWorkoutView: View {
     
     @State private var showingFinishConfirmation = false
     @State private var showingExerciseDetails = false
+    @State private var showingPRCelebration = false
+    @State private var currentPR: PersonalRecord?
     
     @Query private var settingsList: [AppSettings]
     @Query(sort: [SortDescriptor(\WorkoutSession.date, order: .reverse)]) private var sessions: [WorkoutSession]
@@ -71,6 +73,11 @@ struct ModernActiveWorkoutView: View {
             // Rest timer overlay
             if showRestTimer {
                 modernRestTimerOverlay
+            }
+            
+            // PR celebration overlay
+            if showingPRCelebration, let pr = currentPR {
+                prCelebrationOverlay(pr: pr)
             }
             
             // Floating action button
@@ -775,6 +782,16 @@ struct ModernActiveWorkoutView: View {
             let newExerciseSession = ExerciseSession(exerciseName: exercise.name, setLogs: [setLog])
             session.exerciseSessions.append(newExerciseSession)
         }
+        
+        // Check for personal record
+        if let newPR = PersonalRecordManager.shared.checkForPersonalRecord(
+            setLog: setLog, 
+            exerciseName: exercise.name, 
+            modelContext: modelContext
+        ) {
+            // Show PR celebration
+            showPRCelebration(pr: newPR)
+        }
 
         // If this is a working set, auto-adjust plannedSets upward to match current working sets count
         if !isWarmupSet {
@@ -889,6 +906,17 @@ struct ModernActiveWorkoutView: View {
         }
         
         return nil
+    }
+    
+    private func showPRCelebration(pr: PersonalRecord) {
+        currentPR = pr
+        showingPRCelebration = true
+        
+        // Auto-hide after 3 seconds
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+            showingPRCelebration = false
+            currentPR = nil
+        }
     }
     
     private func nextExercise() {
@@ -1626,6 +1654,90 @@ struct ExerciseDetailSheet: View {
             }
         }
         return best
+    }
+}
+
+// MARK: - PR Celebration Overlay
+
+extension ModernActiveWorkoutView {
+    private func prCelebrationOverlay(pr: PersonalRecord) -> some View {
+        ZStack {
+            // Background blur
+            Color.black.opacity(0.3)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    showingPRCelebration = false
+                    currentPR = nil
+                }
+            
+            // Celebration card
+            VStack(spacing: 20) {
+                // Trophy icon with animation
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: [.yellow, .orange],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 80, height: 80)
+                        .scaleEffect(showingPRCelebration ? 1.0 : 0.5)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.8), value: showingPRCelebration)
+                    
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: 40, weight: .bold))
+                        .foregroundColor(.white)
+                        .scaleEffect(showingPRCelebration ? 1.0 : 0.5)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.8).delay(0.1), value: showingPRCelebration)
+                }
+                
+                // PR text
+                VStack(spacing: 8) {
+                    Text("🏆 שיא אישי חדש! 🏆")
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                    
+                    Text(pr.exerciseName)
+                        .font(.headline)
+                        .foregroundColor(.white.opacity(0.9))
+                        .multilineTextAlignment(.center)
+                    
+                    Text("\(String(format: "%.1f", pr.weight)) ק\"ג × \(pr.reps)")
+                        .font(.title)
+                        .fontWeight(.bold)
+                        .foregroundColor(.yellow)
+                        .multilineTextAlignment(.center)
+                }
+                
+                // Close button
+                Button("מעולה!") {
+                    showingPRCelebration = false
+                    currentPR = nil
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .padding(.horizontal, 30)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 25)
+                        .fill(Color.blue.opacity(0.8))
+                )
+            }
+            .padding(30)
+            .background(
+                RoundedRectangle(cornerRadius: 20)
+                    .fill(Color(.systemBackground))
+                    .shadow(color: .black.opacity(0.3), radius: 20, x: 0, y: 10)
+            )
+            .padding(.horizontal, 40)
+            .scaleEffect(showingPRCelebration ? 1.0 : 0.8)
+            .opacity(showingPRCelebration ? 1.0 : 0.0)
+            .animation(.spring(response: 0.6, dampingFraction: 0.8), value: showingPRCelebration)
+        }
     }
 }
 
