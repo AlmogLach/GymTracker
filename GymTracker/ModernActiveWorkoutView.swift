@@ -104,6 +104,20 @@ struct ModernActiveWorkoutView: View {
             didInitSetFields = false
             initializeCurrentExerciseValues()
         }
+        .onChange(of: isWarmupSet) { _, newValue in
+            if newValue {
+                // When switching to warmup, initialize warmup weight
+                initializeWarmupWeight()
+            } else {
+                // When switching to working set, use last working weight or fallback
+                if let lastWorking = latestLoggedSetForCurrentExercise() {
+                    if lastWorking.isWarmup == false {
+                        currentWeight = lastWorking.weight
+                        currentReps = lastWorking.reps
+                    }
+                }
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .restSkipAction)) { _ in
             handleRestSkip()
         }
@@ -788,12 +802,52 @@ struct ModernActiveWorkoutView: View {
             )
         }
 
-        // Update current values for next set (keep the same weight/reps for convenience)
-        // Don't reset to 0 - user likely wants to continue with same values
+        // Update current values for next set
+        if isWarmupSet {
+            // For warmup sets, set next warmup weight based on progression
+            updateNextWarmupWeight()
+        } else {
+            // For working sets, keep the same weight/reps for convenience
+            // Don't reset to 0 - user likely wants to continue with same values
+        }
         
         // Start rest: 60s for warmup, default for working set
         let duration = isWarmupSet ? 60 : settings.defaultRestSeconds
         startRestTimer(seconds: duration)
+    }
+    
+    private func updateNextWarmupWeight() {
+        guard let exercise = currentExercise,
+              let session = currentSession,
+              let exerciseSession = session.exerciseSessions.first(where: { $0.exerciseName == exercise.name }) else { return }
+        
+        let warmupSets = exerciseSession.setLogs.filter { $0.isWarmup == true }
+        
+        if warmupSets.isEmpty {
+            // First warmup set - start with 50% of working weight
+            if let workingSet = exerciseSession.setLogs.last(where: { $0.isWarmup == false }) {
+                currentWeight = workingSet.weight * 0.5
+                currentReps = 8 // Default warmup reps
+            } else {
+                // No working sets yet, use a light weight
+                currentWeight = 20.0
+                currentReps = 8
+            }
+        } else {
+            // Progressive warmup: increase by 20-25% each warmup set
+            let lastWarmup = warmupSets.last!
+            let increment = max(2.5, lastWarmup.weight * 0.2) // At least 2.5kg increment
+            currentWeight = lastWarmup.weight + increment
+            
+            // Reduce reps for heavier warmup sets
+            if currentWeight > lastWarmup.weight * 1.5 {
+                currentReps = max(3, lastWarmup.reps - 2)
+            } else {
+                currentReps = max(5, lastWarmup.reps - 1)
+            }
+        }
+        
+        print("🔥 Next warmup set: \(currentWeight)kg x \(currentReps)")
     }
     
     private func nextExercise() {
@@ -969,8 +1023,35 @@ struct ModernActiveWorkoutView: View {
         print("🔍 Using fallback: 0kg x \(exercise.plannedReps ?? 8)")
         currentWeight = 0.0
         currentReps = exercise.plannedReps ?? 8
+        
+        // If warmup toggle is on, set appropriate warmup weight
+        if isWarmupSet {
+            initializeWarmupWeight()
+        }
     }
-
+    
+    private func initializeWarmupWeight() {
+        guard let exercise = currentExercise else { return }
+        
+        // Try to get working weight from history
+        if let lastWorking = latestLoggedSetForCurrentExercise() {
+            if lastWorking.isWarmup == false {
+                // Use 50% of working weight for first warmup
+                currentWeight = lastWorking.weight * 0.5
+                currentReps = 8
+                print("🔥 Initializing warmup weight: \(currentWeight)kg x \(currentReps) (50% of \(lastWorking.weight)kg)")
+            } else {
+                // Last set was warmup, use updateNextWarmupWeight logic
+                updateNextWarmupWeight()
+            }
+        } else {
+            // No history, use light starting weight
+            currentWeight = 20.0
+            currentReps = 8
+            print("🔥 Initializing warmup weight: \(currentWeight)kg x \(currentReps) (no history)")
+        }
+    }
+    
     private func latestLoggedSetForCurrentExercise() -> SetLog? {
         guard let name = currentExercise?.name else { 
             print("🔍 latestLoggedSetForCurrentExercise: No current exercise name")
